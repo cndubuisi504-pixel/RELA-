@@ -10,6 +10,20 @@ import { site } from "@/lib/site";
 
 export const metadata = { title: "Document" };
 
+/** Nigerian numbers get a country code; without a phone we open WhatsApp's share sheet. */
+function whatsappHref(phone: string | null, text: string): string {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return `https://wa.me/?text=${text}`;
+  const normalized = digits.startsWith("234")
+    ? digits
+    : digits.startsWith("0")
+      ? `234${digits.slice(1)}`
+      : digits.length === 10
+        ? `234${digits}`
+        : digits;
+  return `https://wa.me/${normalized}?text=${text}`;
+}
+
 export default async function DocumentDetail({
   params,
   searchParams,

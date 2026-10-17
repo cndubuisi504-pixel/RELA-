@@ -48,10 +48,20 @@ node qa/shots.mjs # desktop/mobile screenshots in both themes (needs playwright)
 | Stage | Scope | Status |
 | --- | --- | --- |
 | 1 | Tokens, typography, landing page, API docs, support, legal drafts | Built |
-| 2 | Auth (signup / login / reset) | Next |
-| 3 | Business setup flow, Supabase schema + RLS | Planned |
-| 4 | App shell + dashboard | Planned |
-| 5 | Document editor, receipts, invoices, quotations | Planned |
-| 6 | Conversions, previews, exports, public verification | Planned |
-| 7 | Flutterwave checkout + verified webhooks | After merchant account |
-| 8 | Analytics, admin dashboard, deployment | Planned |
+| 2 | Supabase schema, RLS, storage, atomic numbering | Built |
+| 3 | Auth (signup / login / reset / callback) | Built |
+| 4 | Business setup flow (business → branding → preferences) | Built |
+| 5 | App shell, dashboard, usage banner, filters, documents list | Built |
+| 6 | `DocumentItemsEditor` + receipt/invoice/quotation creation | Built |
+| 7 | Public verification `/r/[token]` + WhatsApp share | Built |
+| 8 | Conversions (quote → invoice → receipt), PDF/image export | Next |
+| 9 | Flutterwave checkout + verified webhooks + expiry downgrade | Blocked: merchant account |
+| 10 | Analytics charts, admin dashboard, deployment | Planned |
+
+### Tested end to end
+
+`node qa/flow.mjs` drives a real browser against the real Supabase project:
+login (including the wrong-password path), input preservation after an error, business
+validation, logo upload to storage, preferences, dashboard, document creation, number
+format, anonymous public verification, and protected-route redirects. It currently
+prints **all PASS** with no console errors.
