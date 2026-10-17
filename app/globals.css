@@ -294,6 +294,67 @@
   .anim-fade { animation: none; }
 }
 
+/* --------------------------------------------------------------- print/PDF --- */
+/* The sheet is always paper-white with light-paper colors, even when the app
+   is in dark mode — PDFs are paper. Everything screen-only carries
+   .print-hide; the sheet loses its chrome in @media print. */
+.print-root { background: var(--canvas); min-height: 100dvh; overflow-x: clip; }
+.print-canvas { display: flex; justify-content: center; padding: 20px 14px 40px; }
+.print-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 794px;
+  background: #ffffff;
+  color: #1a1512;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+  padding: clamp(22px, 5vw, 52px);
+  overflow: hidden;
+  isolation: isolate;
+}
+.print-watermark {
+  position: fixed;
+  inset: -8%;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: space-evenly;
+  justify-content: space-evenly;
+  gap: 60px;
+  pointer-events: none;
+}
+.print-watermark span {
+  font-family: var(--font-display);
+  font-size: clamp(90px, 18vw, 150px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  color: rgba(255, 109, 41, 0.055);
+  transform: rotate(-24deg);
+  white-space: nowrap;
+}
+.print-break-avoid { break-inside: avoid; }
+
+@media print {
+  @page { size: A4; margin: 0; }
+  .print-hide { display: none !important; }
+  html,
+  body,
+  .print-root { background: #ffffff !important; }
+  .print-root { min-height: auto; }
+  .print-canvas { padding: 0; }
+  .print-sheet {
+    max-width: none;
+    width: 210mm;
+    min-height: 280mm;
+    margin: 0 auto;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 15mm 15mm 13mm;
+  }
+}
+
 /* -------------------------------------------------------------------- legal */
 .legal-prose { color: var(--ink-2); font-size: 16px; line-height: 1.75; }
 .legal-prose h2 {

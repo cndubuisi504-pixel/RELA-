@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { formatKobo } from "@/lib/money";
 import { typeMeta, type DocType } from "@/lib/documents/status";
-import { CheckIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
+import { CheckIcon, PrintIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { CopyLinkButton } from "@/components/documents/CopyLinkButton";
 import { ConvertToInvoiceButton } from "@/components/documents/ConvertToInvoiceButton";
 import { RecordPaymentSheet } from "@/components/documents/RecordPaymentSheet";
@@ -399,13 +399,19 @@ export default async function DocumentDetail({
           <CopyLinkButton url={publicUrl} />
         </div>
 
-        <Link href={`/r/${doc.public_token}`} className="btn btn-ghost btn-block">
-          Open public verification page
-        </Link>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Link href={`/documents/${doc.id}/print`} className="btn btn-ghost">
+            <PrintIcon size={16} />
+            Save as PDF
+          </Link>
+          <Link href={`/r/${doc.public_token}`} className="btn btn-ghost">
+            Open public verification page
+          </Link>
+        </div>
       </div>
 
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
-        PDF export arrives next. This document is already live at its verification link.
+        PDFs on the free plan carry a small rela. mark — Starter removes it.
       </p>
     </div>
   );
