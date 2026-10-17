@@ -3,8 +3,9 @@
 Business documents for Nigerian small businesses — receipts, invoices and quotations,
 created in seconds, shared on WhatsApp, and verified with a public link.
 
-> **Stage 1 (current):** design foundation + public landing page.
-> Auth, setup and the document app land in the next stages. See "Build status" below.
+> **Now:** the full document loop works end to end — create, convert a quotation into
+> an invoice, take full or partial payments, and share a public verification link.
+> PDF/image export is next. See "Build status" below.
 
 ## Stack
 
@@ -54,9 +55,21 @@ node qa/shots.mjs # desktop/mobile screenshots in both themes (needs playwright)
 | 5 | App shell, dashboard, usage banner, filters, documents list | Built |
 | 6 | `DocumentItemsEditor` + receipt/invoice/quotation creation | Built |
 | 7 | Public verification `/r/[token]` + WhatsApp share | Built |
-| 8 | Conversions (quote → invoice → receipt), PDF/image export | Next |
+| 8 | Conversions: quotation → invoice → receipt, partial payments, status actions | Built |
+| 8b | PDF / image export of a document | Next |
 | 9 | Flutterwave checkout + verified webhooks + expiry downgrade | Blocked: merchant account |
 | 10 | Analytics charts, admin dashboard, deployment | Planned |
+
+### Money rules
+
+- Amounts are integer kobo everywhere; the database recomputes every total from the
+  line items and never trusts client math.
+- Converting a document does **not** use up the free monthly allowance (5 documents),
+  because the vendor already spent it on the source document.
+- Document numbers are allocated per business, per type, per day:
+  `REC-20261017-0001`.
+- A repeat payment tap within two minutes returns the receipt that already exists
+  instead of recording the same money twice.
 
 ### Tested end to end
 
@@ -65,3 +78,7 @@ login (including the wrong-password path), input preservation after an error, bu
 validation, logo upload to storage, preferences, dashboard, document creation, number
 format, anonymous public verification, and protected-route redirects. It currently
 prints **all PASS** with no console errors.
+
+`node qa/conversions.mjs` covers the chain: quotation → invoice → partial payment →
+remaining balance, plus the linked-document cards, the paid-state transitions, and
+that a double tap never charges twice. It prints **14/14 PASS**.

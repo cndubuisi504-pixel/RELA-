@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { formatKobo } from "@/lib/money";
 import {
   lineTotalKobo,
@@ -37,6 +38,9 @@ export function DocumentItemsEditor({
   onItemsChange,
   error,
 }: Props) {
+  // DOM ids come from useId, not the row key: keys are random and would differ
+  // between the server render and hydration.
+  const uid = useId();
   const isService = mode === "service";
   const quantityEnabled = !isService || showQuantity;
   const label = quantityLabels.find((q) => q.id === quantityLabel)?.label ?? "Qty";
@@ -148,11 +152,11 @@ export function DocumentItemsEditor({
                   ].join(" ")}
                 >
                   <div className="space-y-1.5">
-                    <label className="sr-only" htmlFor={`name-${item.key}`}>
+                    <label className="sr-only" htmlFor={`name-${uid}-${index}`}>
                       {isService ? "Service name" : "Item name"}
                     </label>
                     <input
-                      id={`name-${item.key}`}
+                      id={`name-${uid}-${index}`}
                       value={item.name}
                       onChange={(e) => update(index, { name: e.target.value })}
                       placeholder={isService ? "Website design" : "Rice bag"}
@@ -160,11 +164,11 @@ export function DocumentItemsEditor({
                     />
                     {isService && (
                       <>
-                        <label className="sr-only" htmlFor={`desc-${item.key}`}>
+                        <label className="sr-only" htmlFor={`desc-${uid}-${index}`}>
                           Description
                         </label>
                         <textarea
-                          id={`desc-${item.key}`}
+                          id={`desc-${uid}-${index}`}
                           value={item.description}
                           onChange={(e) => update(index, { description: e.target.value })}
                           placeholder="E-commerce site, three revisions, delivery in seven days"

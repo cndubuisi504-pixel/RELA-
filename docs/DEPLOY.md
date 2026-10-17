@@ -51,7 +51,7 @@ vercel --prod
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project (public) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase project — **server only**, sensitive |
-| `ADMIN_EMAIL` | `therelasolutions@gmail.com` |
+| `ADMIN_EMAIL` | `chimdindundubuisirich@gmail.com` |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | `therelasolutions@gmail.com` |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349153230482` |
 

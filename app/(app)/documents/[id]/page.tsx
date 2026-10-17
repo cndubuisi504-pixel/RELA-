@@ -6,6 +6,9 @@ import { formatKobo } from "@/lib/money";
 import { typeMeta, type DocType } from "@/lib/documents/status";
 import { CheckIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { CopyLinkButton } from "@/components/documents/CopyLinkButton";
+import { ConvertToInvoiceButton } from "@/components/documents/ConvertToInvoiceButton";
+import { RecordPaymentSheet } from "@/components/documents/RecordPaymentSheet";
+import { StatusButtons } from "@/components/documents/StatusButtons";
 import { site } from "@/lib/site";
 
 export const metadata = { title: "Document" };
@@ -24,15 +27,24 @@ function whatsappHref(phone: string | null, text: string): string {
   return `https://wa.me/${normalized}?text=${text}`;
 }
 
+type LinkedDoc = { id: string; document_type: DocType; document_number: string };
+type ReceiptRow = {
+  id: string;
+  document_number: string;
+  issued_date: string;
+  receipt_for_payment_kobo: number | null;
+  payment_method: string | null;
+};
+
 export default async function DocumentDetail({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; converted?: string; payment?: string }>;
 }) {
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, converted, payment } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -42,14 +54,16 @@ export default async function DocumentDetail({
   const { data: doc } = await supabase
     .from("documents")
     .select(
-      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public",
+      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public, source_document_id, converted_to_document_id, receipt_for_payment_kobo",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!doc) notFound();
 
-  const [{ data: items }, { data: business }] = await Promise.all([
+  const type = doc.document_type as DocType;
+
+  const [{ data: items }, { data: business }, linkResult, receiptResult] = await Promise.all([
     supabase
       .from("document_items")
       .select("item_name, description, quantity, quantity_label, unit_price_kobo, total_kobo, position")
@@ -60,11 +74,35 @@ export default async function DocumentDetail({
       .select("name, address, phone, email, logo_url, bank_name, bank_account_name, bank_account_number")
       .eq("owner_id", user!.id)
       .maybeSingle(),
+    [doc.source_document_id, doc.converted_to_document_id].filter(Boolean).length
+      ? supabase
+          .from("documents")
+          .select("id, document_type, document_number")
+          .in(
+            "id",
+            [doc.source_document_id, doc.converted_to_document_id].filter(Boolean) as string[],
+          )
+      : Promise.resolve({ data: [] as LinkedDoc[] }),
+    type === "invoice"
+      ? supabase
+          .from("documents")
+          .select("id, document_number, issued_date, receipt_for_payment_kobo, payment_method")
+          .eq("source_document_id", id)
+          .order("created_at")
+      : Promise.resolve({ data: [] as ReceiptRow[] }),
   ]);
 
-  const type = doc.document_type as DocType;
+  const linked = (linkResult.data ?? []) as LinkedDoc[];
+  const receipts = (receiptResult.data ?? []) as ReceiptRow[];
+  const source = linked.find((d) => d.id === doc.source_document_id) ?? null;
+  const convertedTo = linked.find((d) => d.id === doc.converted_to_document_id) ?? null;
+
   const meta = typeMeta[type];
   const publicUrl = `${site.url}/r/${doc.public_token}`;
+  const thisPayment = doc.receipt_for_payment_kobo;
+  // On a receipt, "paid in total" only adds information once there is more than one payment.
+  const showTotalPaid =
+    type !== "receipt" || (thisPayment !== null && doc.amount_paid_kobo > thisPayment);
 
   const waText = encodeURIComponent(
     [
@@ -83,12 +121,28 @@ export default async function DocumentDetail({
       .join("\n"),
   );
 
+  const showConvert = type === "quotation" && doc.status !== "converted" && !doc.converted_to_document_id;
+  const showPayment = type === "invoice" && doc.balance_remaining_kobo > 0;
+
   return (
     <div className="space-y-4">
       {created === "1" && (
         <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-[13.5px] font-medium text-[var(--success)]">
           <CheckIcon size={16} strokeWidth={3} />
           Saved. {doc.document_number} is ready to share.
+        </div>
+      )}
+      {converted === "1" && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-[13.5px] font-medium text-[var(--success)]">
+          <CheckIcon size={16} strokeWidth={3} />
+          {source ? `${source.document_number} is now an invoice.` : "Invoice created."} Share{" "}
+          {doc.document_number} with your customer.
+        </div>
+      )}
+      {payment === "1" && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-[13.5px] font-medium text-[var(--success)]">
+          <CheckIcon size={16} strokeWidth={3} />
+          Payment recorded. {doc.document_number} is ready to send.
         </div>
       )}
 
@@ -199,9 +253,15 @@ export default async function DocumentDetail({
               <dt className="text-[13.5px] font-medium text-ink">Total</dt>
               <dd className="num text-[17px] font-medium text-ink">{formatKobo(doc.total_kobo)}</dd>
             </div>
-            {doc.amount_paid_kobo > 0 && (
+            {type === "receipt" && thisPayment !== null && (
               <div className="flex justify-between text-ink-2">
-                <dt>Paid</dt>
+                <dt>This payment</dt>
+                <dd className="num text-ink">{formatKobo(thisPayment)}</dd>
+              </div>
+            )}
+            {doc.amount_paid_kobo > 0 && showTotalPaid && (
+              <div className="flex justify-between text-ink-2">
+                <dt>{type === "receipt" ? "Paid in total" : "Paid"}</dt>
                 <dd className="num text-[var(--success)]">{formatKobo(doc.amount_paid_kobo)}</dd>
               </div>
             )}
@@ -214,6 +274,12 @@ export default async function DocumentDetail({
               </div>
             )}
           </dl>
+
+          {type === "receipt" && doc.payment_method && (
+            <p className="mt-2.5 text-[11.5px] text-ink-3">
+              Paid via <span className="text-ink-2">{doc.payment_method}</span>
+            </p>
+          )}
 
           {type === "invoice" && business?.bank_account_number && (
             <div className="mt-3 rounded-xl bg-surface-2 p-3 text-[11.5px] leading-relaxed text-ink-2">
@@ -230,32 +296,116 @@ export default async function DocumentDetail({
               <ShieldCheckIcon size={13} className="text-[var(--success)]" />
               Verified with rela.
             </span>
-            <span className="num truncate text-[10.5px] text-ink-3">{site.url.replace(/^https?:\/\//, "")}/r/{doc.public_token.slice(0, 6)}…</span>
+            <span className="num truncate text-[10.5px] text-ink-3">
+              {site.url.replace(/^https?:\/\//, "")}/r/{doc.public_token.slice(0, 6)}…
+            </span>
           </div>
         </div>
       </article>
 
+      {/* Where this document came from, and what it became */}
+      {(source || convertedTo) && (
+        <div className="rounded-2xl border border-line bg-surface p-3.5">
+          <p className="eyebrow text-[9.5px]">Linked documents</p>
+          <div className="mt-2 space-y-1.5">
+            {source && (
+              <Link
+                href={`/documents/${source.id}`}
+                className="flex items-center justify-between gap-3 rounded-xl px-1 py-1.5 text-[13px] text-ink hover:text-[var(--accent-text)]"
+              >
+                <span>
+                  {type === "receipt" ? "Payment against" : "Converted from"}{" "}
+                  <span className="num">{source.document_number}</span>
+                </span>
+                <span aria-hidden className="text-ink-3">
+                  →
+                </span>
+              </Link>
+            )}
+            {convertedTo && (
+              <Link
+                href={`/documents/${convertedTo.id}`}
+                className="flex items-center justify-between gap-3 rounded-xl px-1 py-1.5 text-[13px] text-ink hover:text-[var(--accent-text)]"
+              >
+                <span>
+                  Converted to <span className="num">{convertedTo.document_number}</span>
+                </span>
+                <span aria-hidden className="text-ink-3">
+                  →
+                </span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payments received against an invoice */}
+      {type === "invoice" && receipts.length > 0 && (
+        <div className="rounded-2xl border border-line bg-surface p-3.5">
+          <div className="flex items-baseline justify-between">
+            <p className="eyebrow text-[9.5px]">Payments received</p>
+            <p className="num text-[11.5px] text-ink-3">{receipts.length}</p>
+          </div>
+          <ul className="mt-2 divide-y divide-line">
+            {receipts.map((r) => (
+              <li key={r.id}>
+                <Link
+                  href={`/documents/${r.id}`}
+                  className="flex items-center justify-between gap-3 py-2 text-[13px] text-ink hover:text-[var(--accent-text)]"
+                >
+                  <span className="min-w-0">
+                    <span className="num block truncate">{r.document_number}</span>
+                    <span className="block text-[11.5px] text-ink-3">
+                      {new Date(r.issued_date).toLocaleDateString("en-NG", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                      {r.payment_method ? ` · ${r.payment_method}` : ""}
+                    </span>
+                  </span>
+                  <span className="num shrink-0 text-[13px]">
+                    {formatKobo(r.receipt_for_payment_kobo ?? 0)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Actions */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <a
-          href={whatsappHref(doc.customer_phone, waText)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-primary"
-        >
-          <WhatsAppIcon size={17} />
-          Share on WhatsApp
-        </a>
-        <CopyLinkButton url={publicUrl} />
+      <div className="space-y-2">
+        {showConvert && <ConvertToInvoiceButton documentId={doc.id} />}
+        {showPayment && (
+          <RecordPaymentSheet
+            documentId={doc.id}
+            number={doc.document_number}
+            balanceKobo={doc.balance_remaining_kobo}
+            customerName={doc.customer_name}
+          />
+        )}
+        <StatusButtons documentId={doc.id} type={type} status={doc.status} />
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <a
+            href={whatsappHref(doc.customer_phone, waText)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost"
+          >
+            <WhatsAppIcon size={17} />
+            Share on WhatsApp
+          </a>
+          <CopyLinkButton url={publicUrl} />
+        </div>
+
+        <Link href={`/r/${doc.public_token}`} className="btn btn-ghost btn-block">
+          Open public verification page
+        </Link>
       </div>
 
-      <Link href={`/r/${doc.public_token}`} className="btn btn-ghost btn-block">
-        Open public verification page
-      </Link>
-
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
-        Conversions, PDF export and payment tracking arrive next. This document is already
-        live at its verification link.
+        PDF export arrives next. This document is already live at its verification link.
       </p>
     </div>
   );
