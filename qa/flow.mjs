@@ -70,9 +70,8 @@ await step("business step saves", async () => {
 
 await step("logo upload", async () => {
   if (page.url().includes("/dashboard")) return;   // already-onboarded run
-  const buffer = Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" rx="24" fill="#453027"/><text x="100" y="130" font-size="90" font-family="serif" fill="#F2EBD1" text-anchor="middle">A</text></svg>',
-  );
+  // A real 200×200 PNG, so the logo actually renders after upload.
+  const buffer = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAACGUlEQVR42u3ToQ0AIAxFwW6DZYnuH+bAsQDYCiQJ5sTZit+8WHNs4C6MAAIBgYBAQCAgEBAICAQEAgIBBAICAYGAQEAgIBAQCAgEBAICeXowe4NvBAICAYGAQEAgAkEgAkEgAkEgAkEgAkEgAgGBgEBAICAQEIhAEIhAEIhAEIhAEIhAEIhAQCAgEBAICEQgCEQgCEQgCEQgCEQgCEQgIBAQCAgEBAICEQgCEQgCEQgCEQgCEQgCEQgIBAQCAgGBCASBCASBCASBCASBCASBCAQEAgIBgYBAQCACQSACQSACQSACQSACQSACAYGAQEAgIBCBIBCBIBCBIBCBIBCBIBCBgEBAICAQEAgIRCAIRCAIRCAIRCAIRCAIRCAgEBAICAQE4kkIRCAIRCAIRCAIRCAIRCAgEBAICAQEAgIRCAIRCAIRCAIRCAIRCAIRCAgEBAICAYGAQASCQASCQASCQASCQASCQAQCAgGBgEBAIAJBIAJBIAJBIAJBIAJBIAIBgYBAQCAgEBCIQBCIQBCIQBCIQBCIQBCIQEAgIBAQCAhEIAhEIAhEIAhEIAhEIAhEICAQEAgIBAQCAhEIAhEIAhEIAhEIAhEIAhEICAQEAgIBgQgEgQgEgQgEgQgEgQgEgQgEBAICAYGAQEAgAkEgAkEggEBAICAQEAgIBAQCAgGBgEBAIEYAgYBAQCAgEBAICAQEAgIBgQDFAe9bZMK5gdGSAAAAAElFTkSuQmCC", "base64");
   await page.setInputFiles('input[aria-label="Upload business logo"]', {
     name: "logo.png",
     mimeType: "image/png",

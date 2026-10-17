@@ -153,6 +153,13 @@ export async function saveUploadedAsset(
 ): Promise<{ ok: boolean; error?: string }> {
   const { supabase, user } = await requireUser();
 
+  // Only accept files this user actually owns in our branding bucket. The browser
+  // uploads to storage directly, so the URL is the only thing we can trust-check.
+  const ownedPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/branding/${user.id}/`;
+  if (url && !url.startsWith(ownedPrefix)) {
+    return { ok: false, error: "That upload couldn’t be verified. Please try again." };
+  }
+
   const column = kind === "logo" ? "logo_url" : "signature_url";
   const { error } = await supabase
     .from("businesses")
