@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CreateButton } from "@/components/documents/CreateButton";
 import { StatusBadge } from "@/components/documents/StatusBadge";
-import { typeMeta, type DocType } from "@/lib/documents/status";
+import { effectiveStatus, typeMeta, type DocType } from "@/lib/documents/status";
 import { formatKobo } from "@/lib/money";
 
 const filters = [
@@ -40,7 +40,7 @@ export default async function DocumentsPage({
 
   let query = supabase
     .from("documents")
-    .select("id, document_type, document_number, customer_name, total_kobo, balance_remaining_kobo, status, issued_date")
+    .select("id, document_type, document_number, customer_name, total_kobo, balance_remaining_kobo, status, issued_date, due_date, valid_until")
     .eq("business_id", business!.id)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -121,7 +121,7 @@ export default async function DocumentsPage({
                 </span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                   <span className="num text-[14px] text-ink">{formatKobo(doc.total_kobo)}</span>
-                  <StatusBadge status={doc.status} />
+                  <StatusBadge status={effectiveStatus(doc)} />
                 </span>
               </Link>
             </li>

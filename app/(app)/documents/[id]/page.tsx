@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { formatKobo } from "@/lib/money";
-import { typeMeta, type DocType } from "@/lib/documents/status";
+import { effectiveStatus, typeMeta, type DocType } from "@/lib/documents/status";
 import { CheckIcon, PrintIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { CopyLinkButton } from "@/components/documents/CopyLinkButton";
 import { ConvertToInvoiceButton } from "@/components/documents/ConvertToInvoiceButton";
@@ -98,6 +98,7 @@ export default async function DocumentDetail({
   const convertedTo = linked.find((d) => d.id === doc.converted_to_document_id) ?? null;
 
   const meta = typeMeta[type];
+  const effStatus = effectiveStatus(doc);
   const publicUrl = `${site.url}/r/${doc.public_token}`;
   const thisPayment = doc.receipt_for_payment_kobo;
   // On a receipt, "paid in total" only adds information once there is more than one payment.
@@ -157,7 +158,7 @@ export default async function DocumentDetail({
             </h1>
             <p className="num mt-0.5 text-[12.5px] text-ink-3">{doc.document_number}</p>
           </div>
-          <StatusBadge status={doc.status} />
+          <StatusBadge status={effStatus} />
         </div>
       </div>
 
@@ -384,7 +385,7 @@ export default async function DocumentDetail({
             customerName={doc.customer_name}
           />
         )}
-        <StatusButtons documentId={doc.id} type={type} status={doc.status} />
+        <StatusButtons documentId={doc.id} type={type} status={effStatus} />
 
         <div className="grid gap-2 sm:grid-cols-2">
           <a

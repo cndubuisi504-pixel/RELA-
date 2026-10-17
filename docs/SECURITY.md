@@ -47,6 +47,27 @@ Method: code review + live QA (`qa/*.mjs`). Reviewer: Arena agent at founder's r
 6. **Single founder session policy** — no admin UI to revoke sessions yet.
    Supabase dashboard can revoke manually today.
 
+## Round 2 — adversarial leak hunt (2026-10-17, same day)
+
+Created a second tenant (user + business) and attacked tenant 1 as a logged-in
+stranger. Every probe failed cleanly:
+
+- Cross-tenant document detail and print pages → 404 (RLS, verified in browser).
+- REST with the stranger's JWT selecting tenant-1's documents → `[]`.
+- Profile enumeration → returns only the caller's own row.
+- Writes to `site_settings` (admin table) with a non-admin JWT → 0 rows.
+- `public_document` with a garbage token → null; with a real token → only
+  whitelisted columns (no business ids, no tokens, no owner data).
+- Build inspection: the full service-role key appears only in `.next/server`
+  chunks (never shipped to the browser); client bundles contain only the
+  publishable anon key, which is public by design. `.next` is gitignored and
+  excluded from the deploy zip.
+- `npm audit --omit=dev` → 0 vulnerabilities.
+- Response headers now set on every route: `X-Content-Type-Options`,
+  `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`,
+  `Cross-Origin-Opener-Policy`. CSP deliberately deferred (inline theme
+  bootstrap + Supabase realtime need a report-only rollout first).
+
 ## Found & fixed in this review
 
 - Post-login `next` accepted protocol-relative URLs (`//evil.com`) — an open-redirect

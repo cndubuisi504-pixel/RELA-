@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatKobo } from "@/lib/money";
-import { typeMeta, type DocType } from "@/lib/documents/status";
+import { typeMeta, effectiveStatus, type DocType } from "@/lib/documents/status";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { Logo } from "@/components/branding/Logo";
 import { ShieldCheckIcon } from "@/components/ui/icons";
@@ -163,7 +163,13 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
             </dl>
 
             <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2.5">
-              <StatusBadge status={doc.status} />
+              <StatusBadge status={effectiveStatus({
+                document_type: doc.type,
+                status: doc.status,
+                valid_until: doc.valid_until,
+                due_date: doc.due_date,
+                balance_remaining_kobo: doc.balance_remaining_kobo,
+              })} />
               {doc.status === "paid" ? (
                 <span className="num text-[12px] text-ink-3">
                   Paid {formatKobo(doc.amount_paid_kobo)}
