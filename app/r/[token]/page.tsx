@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatKobo } from "@/lib/money";
 import { typeMeta, type DocType } from "@/lib/documents/status";
 import { StatusBadge } from "@/components/documents/StatusBadge";
-import { RelaMark } from "@/components/branding/Logo";
+import { Logo } from "@/components/branding/Logo";
 import { ShieldCheckIcon } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
@@ -46,12 +46,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
     return (
       <main id="main" className="flex min-h-dvh flex-col bg-canvas">
         <header className="container-x flex h-16 items-center">
-          <Link href="/" className="flex items-center gap-2">
-            <RelaMark size={22} />
-            <span className="text-[20px] font-medium tracking-[-0.045em] text-ink">
-              rela<span className="text-[var(--primary)]">.</span>
-            </span>
-          </Link>
+          <Logo href="/" markSize={22} textClassName="text-[20px]" />
         </header>
         <div className="container-x flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-[420px] rounded-[1.75rem] border border-line bg-surface p-6 text-center">
@@ -77,12 +72,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
   return (
     <main id="main" className="min-h-dvh bg-canvas pb-10">
       <header className="container-x flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <RelaMark size={22} />
-          <span className="text-[20px] font-medium tracking-[-0.045em] text-ink">
-            rela<span className="text-[var(--primary)]">.</span>
-          </span>
-        </Link>
+        <Logo href="/" markSize={22} textClassName="text-[20px]" />
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--success-border)] bg-[var(--success-bg)] px-3 py-1.5 text-[11.5px] font-medium text-[var(--success)]">
           <ShieldCheckIcon size={13} />
           Verified with Rela

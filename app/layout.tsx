@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Script from "next/script";
 import { BrandDefs } from "@/components/branding/Logo";
+import { SiteLogoProvider } from "@/components/branding/LogoContext";
+import { getSiteLogoUrl } from "@/lib/site/logo-server";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -69,7 +71,8 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteLogoUrl = await getSiteLogoUrl();
   return (
     <html lang="en-NG" suppressHydrationWarning>
       <body className={`${satoshi.variable} ${inter.variable}`}>
@@ -80,7 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        {children}
+        <SiteLogoProvider logoUrl={siteLogoUrl}>{children}</SiteLogoProvider>
       </body>
     </html>
   );

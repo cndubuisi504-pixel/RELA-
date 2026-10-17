@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSiteLogo } from "@/components/branding/LogoContext";
 
 /**
  * The Rela mark: a table-like geometric glyph built from three strokes —
@@ -49,10 +52,27 @@ export function Logo({
   textClassName?: string;
   tone?: "default" | "invert";
 }) {
+  const customLogo = useSiteLogo();
+
+  // A custom logo set in /admin replaces the whole lockup — it carries its own wordmark.
   const content = (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <RelaMark size={markSize} />
-      <Wordmark className={`${textClassName} ${tone === "invert" ? "text-invert-text" : "text-ink"}`} />
+      {customLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={customLogo}
+          alt="rela."
+          style={{ height: markSize + 10, width: "auto" }}
+          className="rounded-sm object-contain"
+        />
+      ) : (
+        <>
+          <RelaMark size={markSize} />
+          <Wordmark
+            className={`${textClassName} ${tone === "invert" ? "text-invert-text" : "text-ink"}`}
+          />
+        </>
+      )}
     </span>
   );
 

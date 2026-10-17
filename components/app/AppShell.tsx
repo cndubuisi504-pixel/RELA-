@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { RelaMark } from "@/components/branding/Logo";
+import { Logo } from "@/components/branding/Logo";
 import { CloseIcon, MenuIcon } from "@/components/ui/icons";
 import { logOut } from "@/lib/auth/actions";
 
@@ -89,12 +89,7 @@ export function AppShell({
             </Link>
           </div>
 
-          <Link href="/dashboard" aria-label="rela. home" className="flex items-center gap-1.5">
-            <RelaMark size={22} />
-            <span className="text-[20px] font-medium tracking-[-0.045em] text-ink">
-              rela<span className="text-[var(--primary)]">.</span>
-            </span>
-          </Link>
+          <Logo href="/dashboard" markSize={22} textClassName="text-[20px]" />
 
           <div className="flex justify-end">
             <button

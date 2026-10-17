@@ -82,7 +82,7 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
     return { error: "We couldn’t sign you in just now. Check your connection and retry.", values };
   }
 
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
 }
 
 export async function logOut() {
