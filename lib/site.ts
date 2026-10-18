@@ -12,3 +12,4 @@ export const site = {
 } as const;
 
 export const whatsappLink = `https://wa.me/${site.whatsapp}`;
+export const xUrl = "https://x.com/therelasol";

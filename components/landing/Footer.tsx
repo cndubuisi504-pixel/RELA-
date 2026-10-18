@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/branding/Logo";
-import { WhatsAppIcon } from "@/components/ui/icons";
-import { site, whatsappLink } from "@/lib/site";
+import { WhatsAppIcon, XIcon } from "@/components/ui/icons";
+import { site, whatsappLink, xUrl } from "@/lib/site";
 
 /**
  * Social icons are intentionally omitted until real X / Instagram accounts
@@ -31,7 +31,16 @@ export function Footer() {
                 className="inline-flex min-h-11 w-fit items-center gap-2 text-[var(--invert-muted)] hover:text-[var(--invert-text)]"
               >
                 <WhatsAppIcon size={16} />
-                <span className="num">+234 915 323 0482</span>
+                Chat on WhatsApp
+              </a>
+              <a
+                href={xUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 w-fit items-center gap-2 text-[var(--invert-muted)] hover:text-[var(--invert-text)]"
+              >
+                <XIcon size={14} />
+                @therelasol
               </a>
             </div>
           </div>

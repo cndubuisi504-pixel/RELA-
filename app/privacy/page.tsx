@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/legal/LegalShell";
-import { site } from "@/lib/site";
+import { site, whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -130,8 +130,8 @@ export default function PrivacyPage() {
 
       <h2>12. Contact</h2>
       <p>
-        Privacy questions and requests: <a href={`mailto:${site.email}`}>{site.email}</a> or{" "}
-        <a href="https://wa.me/2349153230482">+234 915 323 0482</a>.
+        Privacy questions and requests: <a href={`mailto:${site.email}`}>{site.email}</a> or on{" "}
+        <a href={whatsappLink}>WhatsApp</a>.
       </p>
     </LegalShell>
   );

@@ -91,6 +91,22 @@ End-to-end tested with a real ₦2,500 charge on Paystack's **test** environment
   any client bundle** — verified by content grep of `.next/static`. Keys live in
   `.env.local` locally, which is gitignored and excluded from the source zip.
 
+## Round 4 — pre-launch verification (2026-10-18)
+
+After the contact-page changes and payment integration, the full battery
+re-ran end to end: onboarding flow (18 checks), conversions &
+idempotency (14), PDF/print (incl. stranger-redirect), admin gate,
+cross-tenant isolation (6 — rewritten to seed and tear down its own
+fixtures, so re-runs can't degrade), plus `npm audit` **0
+vulnerabilities** and a sweep confirming no secret key material in git
+history targets, the source zip, or client bundles. Contact surface
+cleanup: the support phone number no longer renders anywhere on the
+site — WhatsApp is a button/link; X (@therelasol) added.
+
+Operational note: the free-limit counter (`document_usage`) is the
+audit source — deleting documents does not reopen slots. Test resets
+must clear both, as the cross-tenant suite now does in teardown.
+
 ## Found & fixed in this review
 
 - Post-login `next` accepted protocol-relative URLs (`//evil.com`) — an open-redirect

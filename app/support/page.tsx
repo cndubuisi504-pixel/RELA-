@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
-import { WhatsAppIcon } from "@/components/ui/icons";
-import { site, whatsappLink } from "@/lib/site";
+import { WhatsAppIcon, XIcon } from "@/components/ui/icons";
+import { site, whatsappLink, xUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Support",
@@ -51,7 +51,7 @@ export default function SupportPage() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <a
               href={`mailto:${site.email}`}
               className="group rounded-[22px] border border-line bg-surface p-6 transition-shadow hover:shadow-[var(--shadow-1)]"
@@ -71,11 +71,24 @@ export default function SupportPage() {
               className="group rounded-[22px] border border-line bg-surface p-6 transition-shadow hover:shadow-[var(--shadow-1)]"
             >
               <p className="eyebrow">WhatsApp</p>
-              <p className="num mt-3 flex items-center gap-2 text-[17px] font-medium text-ink group-hover:underline">
+              <p className="mt-3 flex items-center gap-2 text-[17px] font-medium text-ink group-hover:underline">
                 <WhatsAppIcon size={17} />
-                +234 915 323 0482
+                Chat on WhatsApp
               </p>
               <p className="mt-2 text-[13.5px] text-ink-3">Fastest for quick questions while you work.</p>
+            </a>
+            <a
+              href={xUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-[22px] border border-line bg-surface p-6 transition-shadow hover:shadow-[var(--shadow-1)]"
+            >
+              <p className="eyebrow">X (Twitter)</p>
+              <p className="mt-3 flex items-center gap-2 text-[17px] font-medium text-ink group-hover:underline">
+                <XIcon size={15} />
+                @therelasol
+              </p>
+              <p className="mt-2 text-[13.5px] text-ink-3">Follow for updates or send us a DM.</p>
             </a>
           </div>
         </section>
