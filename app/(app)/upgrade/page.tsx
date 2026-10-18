@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CheckIcon } from "@/components/ui/icons";
+import { CheckoutButton } from "@/components/billing/CheckoutButton";
 
 export const metadata = { title: "Upgrade" };
 
-export default async function UpgradePage() {
+export default async function UpgradePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ paid?: string }>;
+}) {
+  const { paid } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,6 +41,18 @@ export default async function UpgradePage() {
 
   return (
     <div className="space-y-5">
+      {paid === "1" && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] px-4 py-3 text-[13.5px] font-medium text-[var(--success)]">
+          <CheckIcon size={16} strokeWidth={3} />
+          Payment verified — Starter is active on your account.
+        </div>
+      )}
+      {(paid === "failed" || paid === "invalid") && (
+        <div className="rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger-bg)] px-4 py-3 text-[13.5px] text-[var(--danger)]">
+          We couldn’t verify that payment. If money left your account, message support with the
+          time and amount and we’ll sort it out immediately.
+        </div>
+      )}
       <div>
         <h1 className="text-[26px] font-medium leading-tight tracking-[-0.03em] text-ink">
           {active ? "You’re on Starter" : "Upgrade to Starter"}
@@ -101,27 +119,12 @@ export default async function UpgradePage() {
           <div className="mt-5">
             {active ? (
               <p className="rounded-xl bg-surface-2 px-3 py-2.5 text-[12.5px] text-ink-3">
-                Renewal opens here once Flutterwave billing is switched on.
+                {profile?.subscription_ends_at
+                  ? `Starter is active until ${new Date(profile.subscription_ends_at).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}. Renew below to add another month on top.`
+                  : "Starter is active on your account."}
               </p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled
-                  className="btn btn-primary btn-block"
-                  aria-describedby="billing-status"
-                >
-                  Pay ₦2,500 with Flutterwave
-                </button>
-                <p id="billing-status" className="mt-2 text-center text-[12px] leading-relaxed text-ink-3">
-                  Checkout switches on as soon as the Flutterwave merchant account is live.
-                  Until then, message us and we&apos;ll activate Starter by hand.
-                </p>
-                <Link href="/support" className="btn btn-ghost btn-block mt-2">
-                  Ask support to activate
-                </Link>
-              </>
-            )}
+            ) : null}
+            {!active && <CheckoutButton />}
           </div>
         </section>
       </div>

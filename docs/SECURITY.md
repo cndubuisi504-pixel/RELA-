@@ -68,6 +68,29 @@ stranger. Every probe failed cleanly:
   `Cross-Origin-Opener-Policy`. CSP deliberately deferred (inline theme
   bootstrap + Supabase realtime need a report-only rollout first).
 
+## Round 3 — payment security (Paystack, 2026-10-17)
+
+End-to-end tested with a real ₦2,500 charge on Paystack's **test** environment
+(published test card — no real money moved).
+
+- **Trust model**: redirect params and webhook payloads are never trusted. The
+  callback and the webhook both re-verify the reference with Paystack's API and
+  require `status=success`, exact ₦2,500.00, NGN before anything activates.
+- **Forged reference** in the callback → Paystack says no → `paid=failed`, no activation.
+- **Replay/idempotency**: callback replay cannot duplicate a subscription
+  (unique `(provider, reference)` + upsert); webhook replays dedupe via the
+  `subscription_events` ledger (same `charge.success:<reference>` key).
+- **Webhook authentication**: HMAC-SHA512 of the raw body against the secret key
+  with a timing-safe comparison. Wrong signature → 401. A perfectly-signed-looking
+  body with an unverifiable reference → acknowledged but **no activation**.
+- **Pay-on-behalf**: activation always attaches to the server-side session user
+  (callback) or the metadata set by our own initialize call (webhook) — a
+  customer can't aim a payment at someone else's account.
+- **Key handling**: `PAYSTACK_*` envs are Vercel `sensitive` (write-only after
+  creation), server-side only; hosted checkout means **no Paystack key ships in
+  any client bundle** — verified by content grep of `.next/static`. Keys live in
+  `.env.local` locally, which is gitignored and excluded from the source zip.
+
 ## Found & fixed in this review
 
 - Post-login `next` accepted protocol-relative URLs (`//evil.com`) — an open-redirect

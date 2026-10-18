@@ -54,9 +54,24 @@ vercel --prod
 | `ADMIN_EMAIL` | `chimdindundubuisirich@gmail.com` |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | `therelasolutions@gmail.com` |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349153230482` |
+| `PAYSTACK_SECRET_KEY` | Paystack dashboard — **server only**, sensitive (test key now, swap to live) |
+| `PAYSTACK_PUBLIC_KEY` | Paystack dashboard — sensitive, also server-side; hosted checkout needs no client key |
+| `NEXT_PUBLIC_APP_URL` | `https://rela.vercel.app` (update if the project URL or custom domain differs) |
 
-Still to add when available: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_FLW_PUBLIC_KEY`,
-`FLW_SECRET_KEY`, `FLW_SECRET_HASH`, `FLW_PLAN_CODE`.
+## Paystack go-live checklist
+
+1. Deploy (see above), confirm the site loads at the production URL, and that
+   `NEXT_PUBLIC_APP_URL` matches it — the checkout callback depends on it.
+2. Paystack dashboard → **Settings → Webhooks**: add
+   `https://<production-url>/api/webhooks/paystack`. (Point it at the **live**
+   integration when live keys replace the test ones.)
+3. Replace the two Paystack env vars with `sk_live_…` / `pk_live_…` (*not* in chat —
+   Vercel dashboard → Project → Settings → Environment Variables), trigger a
+   redeploy so server modules pick them up, and set the webhook to the live config.
+4. Make one real ₦2,500 payment end-to-end, confirm Starter activates, then refund
+   it from the Paystack dashboard if you don't want the charge standing.
+5. Done. The monthly renewal reminder flow is manual-by-design for v1 (email the
+   support address from /upgrade).
 
 ## Database
 

@@ -15,7 +15,7 @@ created in seconds, shared on WhatsApp, and verified with a public link.
 - Tailwind CSS v4 with CSS-variable design tokens
 - Satoshi (display/UI) + Inter (numerals), self-hosted
 - Supabase (Postgres, Auth, RLS, Storage) — next stage
-- Flutterwave subscriptions — once the merchant account is live
+- Paystack subscriptions — test keys wired, live keys swap in Vercel
 
 ## Run locally
 
@@ -59,7 +59,7 @@ node qa/shots.mjs # desktop/mobile screenshots in both themes (needs playwright)
 | 7 | Public verification `/r/[token]` + WhatsApp share | Built |
 | 8 | Conversions: quotation → invoice → receipt, partial payments, status actions | Built |
 | 8b | PDF export via print-ready A4 page | Built |
-| 9 | Flutterwave checkout + verified webhooks + expiry downgrade | Blocked: merchant account |
+| 9 | Paystack checkout + verified webhooks + expiry downgrade | Built (test keys) |
 | 10 | Analytics charts, admin dashboard, deployment | Planned |
 
 ### Money rules

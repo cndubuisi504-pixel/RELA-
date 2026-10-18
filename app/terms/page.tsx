@@ -44,7 +44,7 @@ export default function TermsPage() {
       <ul>
         <li>The Starter plan is ₦2,500 per month unless another price is shown at checkout.</li>
         <li>
-          Payments are processed by Flutterwave. By subscribing you also accept Flutterwave&apos;s
+          Payments are processed by Paystack. By subscribing you also accept Paystack&apos;s
           terms and any fees disclosed at checkout. Rela does not store your full card details.
         </li>
         <li>

@@ -28,7 +28,7 @@ const faqs = [
   },
   {
     q: "How do I pay for Starter?",
-    a: "Through Flutterwave at checkout — card, bank transfer or USSD. Your plan activates only after our servers verify the payment, which usually takes a few seconds.",
+    a: "Through Paystack at checkout — card, bank transfer or USSD. Your plan activates only after our servers verify the payment, which usually takes a few seconds.",
   },
   {
     q: "Is my customers' data safe?",

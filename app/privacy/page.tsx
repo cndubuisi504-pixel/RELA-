@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Payment data</strong> — plan, subscription status, transaction references and
-          verification timestamps. Card details are collected and processed by Flutterwave; Rela
+          verification timestamps. Card details are collected and processed by Paystack; Rela
           never receives your full card number.
         </li>
         <li>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
       <h2>5. Who we share data with</h2>
       <ul>
         <li><strong>Supabase</strong> — database, authentication and file storage.</li>
-        <li><strong>Flutterwave</strong> — payment processing and subscription billing.</li>
+        <li><strong>Paystack</strong> — payment processing and subscription billing.</li>
         <li><strong>Vercel</strong> — application hosting and delivery.</li>
         <li><strong>Email providers</strong> — transactional messages such as password resets and receipts.</li>
         <li>Professional advisers, or authorities where the law requires it.</li>

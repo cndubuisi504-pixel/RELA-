@@ -47,7 +47,7 @@ const plans: Plan[] = [
       "Priority email support",
     ],
     cta: { label: "Get Starter", href: "/signup?plan=starter" },
-    note: "Billed monthly with Flutterwave. Renew or cancel anytime.",
+    note: "Billed monthly with Paystack. Renew or cancel anytime.",
     featured: true,
   },
   {
