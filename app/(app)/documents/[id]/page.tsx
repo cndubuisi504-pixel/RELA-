@@ -6,6 +6,8 @@ import { formatKobo } from "@/lib/money";
 import { effectiveStatus, typeMeta, type DocType } from "@/lib/documents/status";
 import { CheckIcon, PrintIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { ShareSheet } from "@/components/documents/ShareSheet";
+import { PrintSheetView } from "@/components/documents/PrintSheetView";
+import { loadPrintData } from "@/lib/documents/print-data";
 import { ConvertToInvoiceButton } from "@/components/documents/ConvertToInvoiceButton";
 import { RecordPaymentSheet } from "@/components/documents/RecordPaymentSheet";
 import { StatusButtons } from "@/components/documents/StatusButtons";
@@ -100,6 +102,8 @@ export default async function DocumentDetail({
   const meta = typeMeta[type];
   const effStatus = effectiveStatus(doc);
   const publicUrl = `${site.url}/r/${doc.public_token}`;
+  // Exact print sheet, pre-rendered hidden for the ShareSheet's in-page PDF capture.
+  const printData = await loadPrintData(id);
   const thisPayment = doc.receipt_for_payment_kobo;
   // On a receipt, "paid in total" only adds information once there is more than one payment.
   const showTotalPaid =
@@ -261,10 +265,18 @@ export default async function DocumentDetail({
                 <dd className="num text-ink">{formatKobo(thisPayment)}</dd>
               </div>
             )}
-            {doc.amount_paid_kobo > 0 && showTotalPaid && (
+            {type !== "quotation" && (
               <div className="flex justify-between text-ink-2">
-                <dt>{type === "receipt" ? "Paid in total" : "Paid"}</dt>
-                <dd className="num text-[var(--success)]">{formatKobo(doc.amount_paid_kobo)}</dd>
+                <dt>{type === "receipt" && showTotalPaid ? "Paid in total" : "Paid"}</dt>
+                <dd
+                  className={
+                    doc.amount_paid_kobo > 0
+                      ? "num text-[var(--success)]"
+                      : "num text-ink-3"
+                  }
+                >
+                  {formatKobo(doc.amount_paid_kobo)}
+                </dd>
               </div>
             )}
             {doc.balance_remaining_kobo > 0 && (
@@ -275,12 +287,22 @@ export default async function DocumentDetail({
                 </dd>
               </div>
             )}
+            {type !== "quotation" &&
+              doc.amount_paid_kobo > 0 &&
+              doc.balance_remaining_kobo === 0 && (
+                <p className="pt-1 text-right text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--success)]">
+                  Paid in full
+                </p>
+              )}
           </dl>
 
-          {type === "receipt" && doc.payment_method && (
+          {type === "receipt" && doc.payment_method && doc.amount_paid_kobo > 0 && (
             <p className="mt-2.5 text-[11.5px] text-ink-3">
-              Paid via <span className="text-ink-2">{doc.payment_method}</span>
+              Received via <span className="text-ink-2">{doc.payment_method}</span>
             </p>
+          )}
+          {type === "receipt" && doc.amount_paid_kobo === 0 && (
+            <p className="mt-2.5 text-[11.5px] text-ink-3">No payment received yet.</p>
           )}
 
           {type === "invoice" && business?.bank_account_number && (
@@ -395,13 +417,24 @@ export default async function DocumentDetail({
           waCaption={waCaption}
           waFallbackHref={whatsappHref(doc.customer_phone, waText)}
           printUrl={`/documents/${doc.id}/print`}
-          printFrameUrl={`/documents/${doc.id}/print?noprint=1`}
         />
       </div>
 
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
         PDFs on the free plan carry a small rela. mark — Starter removes it.
       </p>
+
+      {/* Hidden print-sheet clone: ShareSheet un-hides this, rasterises it to
+          the WhatsApp PDF, and hides it again — no popup window needed. */}
+      <div id="pdf-capture-root" className="hidden" aria-hidden="true">
+        <PrintSheetView
+          doc={printData.doc}
+          items={printData.items}
+          business={printData.business}
+          publicUrl={publicUrl}
+          watermark={printData.watermark}
+        />
+      </div>
     </div>
   );
 }

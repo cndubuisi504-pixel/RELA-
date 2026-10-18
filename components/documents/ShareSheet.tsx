@@ -16,7 +16,6 @@ type Props = {
   waCaption: string; // plain-text caption (short summary + public link)
   waFallbackHref: string; // wa.me link (customer-targeted when a phone exists)
   printUrl: string; // /documents/[id]/print (browser save-as-pdf route)
-  printFrameUrl: string; // same, with ?noprint=1 for the capture iframe
 };
 
 type Note = { tone: "ok" | "warn" | "error"; text: string } | null;
@@ -33,7 +32,6 @@ export function ShareSheet({
   waCaption,
   waFallbackHref,
   printUrl,
-  printFrameUrl,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,31 +59,41 @@ export function ShareSheet({
     setNote(null);
   }, []);
 
-  /* ---------- PDF built from the real print sheet ----------
-     Framing is DENYed app-wide (clickjacking), so the print sheet renders in a
-     small same-origin popup, gets captured, then closes. The popup opens only
-     from this user gesture. */
+  /* ---------- PDF built from the hidden in-page print sheet ----------
+     The document page pre-renders an exact copy of the print sheet inside
+     #pdf-capture-root (display:none). We un-hide it under a "Preparing your
+     PDF" veil long enough to rasterise it, then hide it again. No popup, no
+     second navigation — popup blockers and small screens can't break this. */
   async function buildPdf(): Promise<File> {
     const html2pdf = (await import("html2pdf.js")).default;
-    const win = window.open(
-      printFrameUrl,
-      "rela-print-capture",
-      "popup=yes,width=820,height=1160,left=9000,top=0",
-    );
-    if (!win) throw new Error("popup-blocked");
+    const host = document.getElementById("pdf-capture-root");
+    if (!host) throw new Error("capture-target-missing");
+
+    const prevClass = host.className;
+    const veil = document.createElement("div");
+    veil.className = "pdf-capture-veil";
+    veil.innerHTML = `<div class="pdf-capture-spinner" role="status">Preparing your PDF…</div>`;
     try {
-      await new Promise<void>((resolve) => {
-        let done = false;
-        const finish = () => {
-          if (done) return;
-          done = true;
-          setTimeout(resolve, 1300); // fonts + images settle before capture
-        };
-        win.addEventListener("load", finish, { once: true });
-        setTimeout(finish, 6000); // hard cap — never hang on a broken window
-      });
-      const target = win.document.querySelector<HTMLElement>(".print-sheet");
+      host.removeAttribute("aria-hidden");
+      host.className = "pdf-capture-host";
+      host.appendChild(veil);
+
+      try {
+        await Promise.race([
+          (document as Document & { fonts?: FontFaceSet }).fonts?.ready ?? Promise.resolve(),
+          new Promise((r) => setTimeout(r, 1500)),
+        ]);
+      } catch {
+        /* fonts API unavailable — capture anyway */
+      }
+      // Two frames so the browser has painted the newly-visible sheet.
+      await new Promise((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 60))),
+      );
+
+      const target = host.querySelector<HTMLElement>(".print-sheet");
       if (!target) throw new Error("print-sheet-missing");
+
       const blob: Blob = await html2pdf()
         .set({
           margin: 10,
@@ -104,7 +112,9 @@ export function ShareSheet({
         .outputPdf("blob");
       return new File([blob], `${documentNumber}.pdf`, { type: "application/pdf" });
     } finally {
-      win.close();
+      veil.remove();
+      host.className = prevClass || "hidden";
+      host.setAttribute("aria-hidden", "true");
     }
   }
 

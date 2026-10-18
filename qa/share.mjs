@@ -65,6 +65,24 @@ console.log(`   → Outstanding card: ₦${outstandingLine?.[1]} (invoices only 
 
 /* ------------------------------------------------ share sheet */
 await page.goto(docUrl, { waitUntil: "networkidle" });
+
+/* clarity on a ₦0-paid receipt (the user's confusion point) */
+const summaryText = await page.locator("main, [role=main], body").first().innerText();
+check("₦0-paid receipt shows 'No payment received yet.'",
+  /No payment received yet\./.test(summaryText), summaryText.match(/payment received yet\./i)?.[0] ?? "");
+check("₦0-paid receipt does NOT claim 'Paid via …'",
+  !/Paid via/i.test(summaryText));
+check("Balance line reads ₦150,000", /Balance[\s\S]{0,20}150,000/.test(summaryText.replace(/₦\s?/g, "₦")));
+
+/* hidden capture host exists with a full print sheet inside */
+const hostInfo = await page.locator("#pdf-capture-root").evaluate((el) => ({
+  display: getComputedStyle(el).display,
+  sheets: el.querySelectorAll(".print-sheet").length,
+  number: el.textContent?.includes("REC-"),
+}));
+check("#pdf-capture-root is pre-rendered, hidden, and holds the print sheet",
+  hostInfo.display === "none" && hostInfo.sheets === 1 && !!hostInfo.number, hostInfo.display);
+
 await page.getByRole("button", { name: /share receipt/i }).click();
 const sheet = page.getByRole("dialog", { name: /share receipt/i });
 check("one Share button opens the sheet", await sheet.isVisible());
@@ -91,6 +109,12 @@ const [popup] = await Promise.all([
 ]);
 const fpath = path.join(os.tmpdir(), "qa-shared-receipt.pdf");
 await download.saveAs(fpath);
+const hostAfter = await page.locator("#pdf-capture-root").evaluate((el) => ({
+  display: getComputedStyle(el).display,
+  veils: document.querySelectorAll(".pdf-capture-veil").length,
+}));
+check("capture host hides again + veil removed after the build",
+  hostAfter.display === "none" && hostAfter.veils === 0, hostAfter.display);
 const size = fs.statSync(fpath).size;
 check("a real PDF is produced", size > 25_000, `${Math.round(size / 1024)} KB`);
 check("PDF filename is the document number", /REC-.*\.pdf$/.test(download.suggestedFilename()), download.suggestedFilename());
@@ -106,6 +130,16 @@ check("ESC/close dismisses the sheet", !(await sheet.isVisible()));
 
 const printProbe = await page.evaluate((u) => fetch(u + "/print?noprint=1").then((r) => r.status), docUrl);
 check("print route still serves (?noprint too)", printProbe === 200);
+
+await page.goto(`${docUrl}/print?noprint=1`, { waitUntil: "networkidle" });
+const sheetText = await page.locator(".print-sheet").innerText();
+check("print sheet shows explicit 'Amount paid ₦0'",
+  /Amount paid\s+₦0\b/.test(sheetText.replace(/\s+/g, " ")), sheetText.match(/Amount paid[^\n]*/)?.[0]);
+check("print sheet shows 'Balance owed ₦150,000'",
+  /Balance owed\s+₦150,000/.test(sheetText.replace(/\s+/g, " ")));
+check("print sheet never claims 'Paid via' on ₦0 paid",
+  !/Paid via/i.test(sheetText));
+await page.goto(docUrl, { waitUntil: "networkidle" });
 
 /* ------------------------------------------------ teardown: keep the suite usage-neutral */
 await rest(`documents?business_id=eq.${QA_BIZ}`, { method: "DELETE" });
