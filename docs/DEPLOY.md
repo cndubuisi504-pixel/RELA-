@@ -26,11 +26,11 @@ The only missing step is getting the source into Vercel — pick **one** of the 
 
 ```bash
 cd rela
-npm i -g vercel
-vercel login
-vercel link --project rela        # select the existing project
-vercel --prod
+npx vercel login                  # follow the emailed link
+npm run deploy                    # links the project + deploys to production
 ```
+
+(`npm run deploy` runs `vercel link --yes --project rela && vercel --prod --yes`.)
 
 ## After the first deploy
 
@@ -56,14 +56,14 @@ vercel --prod
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349153230482` |
 | `PAYSTACK_SECRET_KEY` | Paystack dashboard — **server only**, sensitive (test key now, swap to live) |
 | `PAYSTACK_PUBLIC_KEY` | Paystack dashboard — sensitive, also server-side; hosted checkout needs no client key |
-| `NEXT_PUBLIC_APP_URL` | `https://rela.vercel.app` (update if the project URL or custom domain differs) |
+| `NEXT_PUBLIC_APP_URL` | `https://rela-iota-eight.vercel.app` — the project's actual production URL (already set) |
 
 ## Paystack go-live checklist
 
 1. Deploy (see above), confirm the site loads at the production URL, and that
    `NEXT_PUBLIC_APP_URL` matches it — the checkout callback depends on it.
 2. Paystack dashboard → **Settings → Webhooks**: add
-   `https://<production-url>/api/webhooks/paystack`. (Point it at the **live**
+   `https://rela-iota-eight.vercel.app/api/webhooks/paystack`. (Point it at the **live**
    integration when live keys replace the test ones.)
 3. Replace the two Paystack env vars with `sk_live_…` / `pk_live_…` (*not* in chat —
    Vercel dashboard → Project → Settings → Environment Variables), trigger a
@@ -85,5 +85,9 @@ SQL editor and run it.
 
 ## What the deploy contains today
 
-Landing page, `/api-docs`, `/support`, `/terms`, `/privacy`, 404, robots and sitemap.
-`/signup` and `/login` show the early-access gate until auth ships in the next stage.
+Everything — the complete app: landing, auth, business setup, dashboard,
+documents (create, convert, payments, PDF print), public verify pages, upgrade
+with Paystack checkout and webhook, admin, support, terms, privacy, API docs.
+QA suites live in `qa/` and are not required for the build (and are not part of
+deployments prepared from the trimmed manifest).
+

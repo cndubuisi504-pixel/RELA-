@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "qa": "node qa/a11y.mjs && node qa/shots.mjs"
+    "qa": "node qa/a11y.mjs && node qa/shots.mjs",
+    "deploy": "vercel link --yes --project rela && vercel --prod --yes"
   },
   "keywords": [],
   "author": "",
