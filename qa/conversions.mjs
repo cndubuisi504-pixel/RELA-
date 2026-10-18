@@ -164,8 +164,11 @@ await step("converted receipt verifies anonymously", async () => {
   const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const anon = await ctx2.newPage();
   await page.goto(seen.receiptUrl2, { waitUntil: "networkidle" });
-  const link = await page.getByRole("link", { name: /open public verification page/i }).getAttribute("href");
-  await anon.goto(base + link, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /share receipt/i }).click();
+  const sheet = page.getByRole("dialog", { name: /share receipt/i });
+  const link = await sheet.getByRole("link", { name: /open public page/i }).getAttribute("href");
+  await sheet.getByRole("button", { name: /close/i }).click();
+  await anon.goto(link.startsWith("http") ? link : base + link, { waitUntil: "networkidle" });
   const body = await anon.locator("body").innerText();
   if (!/Verified with rela/i.test(body)) throw new Error("no verification badge");
   if (!/450,000/.test(body)) throw new Error("total missing for anonymous viewer");

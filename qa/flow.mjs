@@ -104,13 +104,29 @@ await step("create sheet opens", async () => {
   await page.screenshot({ path: "/tmp/f4-create-sheet.png" });
 });
 
-await step("receipt editor opens in service mode", async () => {
+await step("receipt editor opens", async () => {
   await page.getByRole("link", { name: /receipt/i }).click();
   await page.waitForURL(/\/documents\/new\?type=receipt/, { timeout: 30000, waitUntil: "commit" });
   await page.getByRole("heading", { name: /new receipt/i }).waitFor();
 });
 
 await step("service mode hides quantity", async () => {
+  await page.waitForLoadState("networkidle"); // let hydration bind handlers (cold dev compiles are slow)
+  const service = page.getByRole("button", { name: /^service$/i });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await service.click();
+    try {
+      await page.waitForFunction(
+        () => document.querySelector('[aria-pressed="true"]')?.textContent?.trim().toLowerCase() === "service",
+        null,
+        { timeout: 8000 },
+      );
+      break;
+    } catch {
+      if (attempt === 2) throw new Error("service toggle never activated");
+    }
+  }
+  await page.waitForTimeout(300);
   const qtyInputs = await page.locator('input[aria-label^="Qty for row"]').count();
   if (qtyInputs !== 0) throw new Error("quantity input visible in service mode");
 });
@@ -141,10 +157,13 @@ await step("document number format", async () => {
 });
 
 await step("public verification page renders without auth", async () => {
-  const link = await page.getByRole("link", { name: /open public verification page/i }).getAttribute("href");
+  await page.getByRole("button", { name: /share receipt/i }).click();
+  const sheet = page.getByRole("dialog", { name: /share receipt/i });
+  const link = await sheet.getByRole("link", { name: /open public page/i }).getAttribute("href");
+  await sheet.getByRole("button", { name: /close/i }).click();
   const anon = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const p2 = await anon.newPage();
-  const res = await p2.goto(base + link, { waitUntil: "networkidle" });
+  const res = await p2.goto(link.startsWith("http") ? link : base + link, { waitUntil: "networkidle" });
   if (res.status() !== 200) throw new Error("status " + res.status());
   await p2.getByText(/verified with rela/i).first().waitFor();
   const body = await p2.locator("main").innerText();

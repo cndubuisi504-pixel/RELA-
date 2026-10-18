@@ -45,6 +45,10 @@ const ps = (path, body) =>
 
 /* ---------------------------------------------------------------- setup state */
 const QA_UID = "509a7f5e-1354-4282-ba9b-ccf18d907b01";
+const QA2_UID = await fetch(
+  "https://zglkbrivfkabmlhrllbf.supabase.co/rest/v1/profiles?select=id&full_name=eq.QA%20Two",
+  { headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY } },
+).then((r) => r.json()).then((a) => a[0]?.id);
 
 // Every run starts from a clean free account.
 await rest(`subscriptions?profile_id=eq.${QA_UID}`, { method: "DELETE" });
@@ -153,7 +157,7 @@ await step("webhook with faked success but unverifiable reference never activate
   const fakeRef = "rel_attacker_0000000000";
   const payload = JSON.stringify({
     event: "charge.success",
-    data: { reference: fakeRef, metadata: { user_id: "967af928-b45d-437d-ab2f-af06520aca61" } },
+    data: { reference: fakeRef, metadata: { user_id: QA2_UID } },
   });
   const sig = crypto.createHmac("sha512", PK_SECRET).update(payload).digest("hex");
   const res = await fetch(`${base}/api/webhooks/paystack`, {
@@ -161,7 +165,7 @@ await step("webhook with faked success but unverifiable reference never activate
     headers: { "Content-Type": "application/json", "x-paystack-signature": sig },
     body: payload,
   });
-  const prof = await rest("profiles?id=eq.967af928-b45d-437d-ab2f-af06520aca61&select=plan");
+  const prof = await rest(`profiles?id=eq.${QA2_UID}&select=plan`);
   if (prof[0]?.plan !== "free") throw new Error("attacker upgraded an account without paying!");
   const body = await res.json();
   // duplicate-replay answers 200 ok:true by design; the invariant is: no activation.

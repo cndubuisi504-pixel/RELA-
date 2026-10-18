@@ -12,7 +12,7 @@ import crypto from "node:crypto";
 
 const base = "http://localhost:3000";
 const QA_UID = "509a7f5e-1354-4282-ba9b-ccf18d907b01";
-const QA_BIZ = "32fb3664-84e3-47a4-a12d-98021aa06ac9";
+const QA_BIZ = "224a87f0-5294-4ae1-bd81-86da8ed685ba";
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPA = "https://zglkbrivfkabmlhrllbf.supabase.co";
 
@@ -32,6 +32,10 @@ const rest = async (path, init = {}) => {
 };
 
 const browser = await chromium.launch();
+
+/* self-heal: usable even after a crashed previous run */
+await rest(`documents?business_id=eq.${QA_BIZ}`, { method: "DELETE" });
+await rest(`document_usage?business_id=eq.${QA_BIZ}&period_month=eq.${new Date().toISOString().slice(0, 7) + "-01"}`, { method: "DELETE" });
 let failed = 0;
 const check = (name, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"} ${name}${detail ? " — " + detail : ""}`);

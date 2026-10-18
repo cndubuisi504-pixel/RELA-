@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 import { PrintIcon } from "@/components/ui/icons";
 
-/** Auto-open the print dialog once fonts and images have had a moment to load. */
-export function PrintTrigger() {
+/** Auto-open the print dialog once fonts and images have had a moment to load. skip=embed capture. */
+export function PrintTrigger({ skip = false }: { skip?: boolean }) {
   useEffect(() => {
+    if (skip) return;
     const timer = setTimeout(() => window.print(), 1200);
     return () => clearTimeout(timer);
-  }, []);
+  }, [skip]);
   return null;
 }
 

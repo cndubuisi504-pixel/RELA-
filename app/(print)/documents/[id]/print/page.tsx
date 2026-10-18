@@ -14,8 +14,15 @@ function d(date: string, opts: Intl.DateTimeFormatOptions = { day: "numeric", mo
   return new Date(date).toLocaleDateString("en-NG", opts);
 }
 
-export default async function PrintPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PrintPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  const skipAuto = (await searchParams)?.noprint === "1";
   const { doc, items, business, watermark } = await loadPrintData(id);
 
   const meta = typeMeta[doc.document_type];
@@ -38,7 +45,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="print-root">
       <PrintBar label={`${meta.label} · ${doc.document_number}`} />
-      <PrintTrigger />
+      <PrintTrigger skip={skipAuto} />
 
       <div className="print-canvas">
         <article className="print-sheet" aria-label={`${meta.label} ${doc.document_number}`}>

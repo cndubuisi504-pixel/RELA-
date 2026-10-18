@@ -26,6 +26,18 @@ async function step(name, fn) {
 }
 
 const browser = await chromium.launch();
+
+/* watermark + limits only exist on the free plan — pin it before touching the app */
+await fetch("https://zglkbrivfkabmlhrllbf.supabase.co/rest/v1/profiles?id=eq.509a7f5e-1354-4282-ba9b-ccf18d907b01", {
+  method: "PATCH",
+  headers: {
+    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    "Content-Type": "application/json",
+    Prefer: "return=minimal",
+  },
+  body: JSON.stringify({ plan: "free", subscription_status: "inactive", subscription_started_at: null, subscription_ends_at: null }),
+});
 const ctx = await browser.newContext({ viewport: { width: 1024, height: 900 } });
 const page = await ctx.newPage();
 page.on("console", (m) => {
@@ -53,7 +65,10 @@ let text;
 await step("print page renders the full A4 sheet", async () => {
   await page.goto(`${base}/documents/${docId}/print`, { waitUntil: "networkidle" });
   text = await page.locator(".print-sheet").innerText();
-  for (const needle of ["Adaeze Fabrics", "Verify this"]) {
+  const bizName = await fetch("https://zglkbrivfkabmlhrllbf.supabase.co/rest/v1/businesses?select=name&limit=1&owner_id=eq.509a7f5e-1354-4282-ba9b-ccf18d907b01", {
+        headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, apikey: process.env.SUPABASE_SERVICE_ROLE_KEY },
+      }).then((r) => r.json()).then((a) => a[0]?.name).catch(() => null);
+  for (const needle of [bizName ?? "rela", "Verify this"]) {
     if (!text.includes(needle)) throw new Error(`missing “${needle}”`);
   }
   if (!/billed to|received from/i.test(text)) throw new Error("missing customer block");

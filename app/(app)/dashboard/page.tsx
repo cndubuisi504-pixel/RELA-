@@ -19,6 +19,7 @@ type Row = {
   document_number: string;
   customer_name: string;
   total_kobo: number;
+  amount_paid_kobo: number;
   balance_remaining_kobo: number;
   status: string;
   issued_date: string;
@@ -56,7 +57,7 @@ export default async function DashboardPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, document_type, document_number, customer_name, total_kobo, balance_remaining_kobo, status, issued_date")
+      .select("id, document_type, document_number, customer_name, total_kobo, amount_paid_kobo, balance_remaining_kobo, status, issued_date")
       .eq("business_id", business!.id)
       .order("created_at", { ascending: false })
       .limit(50),
@@ -76,7 +77,7 @@ export default async function DashboardPage({
     .reduce((sum, d) => sum + d.balance_remaining_kobo, 0);
   const collected = all
     .filter((d) => d.document_type === "receipt")
-    .reduce((sum, d) => sum + d.total_kobo, 0);
+    .reduce((sum, d) => sum + d.amount_paid_kobo, 0);
 
   const monthLabel = new Date().toLocaleDateString("en-NG", { month: "long" });
   const daysLeft = profile?.subscription_ends_at

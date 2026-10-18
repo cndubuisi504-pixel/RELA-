@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/documents/StatusBadge";
 import { formatKobo } from "@/lib/money";
 import { effectiveStatus, typeMeta, type DocType } from "@/lib/documents/status";
 import { CheckIcon, PrintIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
-import { CopyLinkButton } from "@/components/documents/CopyLinkButton";
+import { ShareSheet } from "@/components/documents/ShareSheet";
 import { ConvertToInvoiceButton } from "@/components/documents/ConvertToInvoiceButton";
 import { RecordPaymentSheet } from "@/components/documents/RecordPaymentSheet";
 import { StatusButtons } from "@/components/documents/StatusButtons";
@@ -121,6 +121,7 @@ export default async function DocumentDetail({
       .filter(Boolean)
       .join("\n"),
   );
+  const waCaption = decodeURIComponent(waText);
 
   const showConvert = type === "quotation" && doc.status !== "converted" && !doc.converted_to_document_id;
   const showPayment = type === "invoice" && doc.balance_remaining_kobo > 0;
@@ -387,28 +388,15 @@ export default async function DocumentDetail({
         )}
         <StatusButtons documentId={doc.id} type={type} status={effStatus} />
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          <a
-            href={whatsappHref(doc.customer_phone, waText)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost"
-          >
-            <WhatsAppIcon size={17} />
-            Share on WhatsApp
-          </a>
-          <CopyLinkButton url={publicUrl} />
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Link href={`/documents/${doc.id}/print`} className="btn btn-ghost">
-            <PrintIcon size={16} />
-            Save as PDF
-          </Link>
-          <Link href={`/r/${doc.public_token}`} className="btn btn-ghost">
-            Open public verification page
-          </Link>
-        </div>
+        <ShareSheet
+          documentNumber={doc.document_number}
+          label={meta.label}
+          publicUrl={publicUrl}
+          waCaption={waCaption}
+          waFallbackHref={whatsappHref(doc.customer_phone, waText)}
+          printUrl={`/documents/${doc.id}/print`}
+          printFrameUrl={`/documents/${doc.id}/print?noprint=1`}
+        />
       </div>
 
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
