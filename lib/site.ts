@@ -3,7 +3,7 @@ export const site = {
   shortName: "Rela",
   tagline: "Create receipts, invoices & quotations in seconds.",
   description:
-    "Rela helps small businesses create professional documents, share them with customers, and keep every payment record organized.",
+    "Rela helps businesses and freelancers create professional documents, share them with customers, and keep every payment record organized.",
   email: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "therelasolutions@gmail.com",
   whatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "2349153230482",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",

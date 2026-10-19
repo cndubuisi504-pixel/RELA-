@@ -201,7 +201,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
           <Link href="/" className="font-medium text-[var(--accent-text)] hover:underline">
             Rela
           </Link>
-          , the document tool for small businesses.
+          , the document tool for businesses and freelancers.
         </p>
       </div>
     </main>

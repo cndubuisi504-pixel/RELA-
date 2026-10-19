@@ -19,7 +19,7 @@ export function Hero() {
         <div>
           <p className="eyebrow flex items-center gap-2">
             <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-            Built for small businesses in Nigeria
+            Built for businesses and freelancers
           </p>
 
           <h1 className="h-display mt-6 text-ink">
