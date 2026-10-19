@@ -21,20 +21,27 @@ const primary: NavItem[] = [
 export function AppShell({
   children,
   businessName,
+  logoUrl,
   ownerName,
   email,
 }: {
   children: React.ReactNode;
   businessName: string;
+  logoUrl?: string | null;
   ownerName: string;
   email: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const pathname = usePathname();
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUrl]);
 
   useEffect(() => {
     if (!open) return;
@@ -82,10 +89,20 @@ export function AppShell({
           <div className="flex items-center">
             <Link
               href="/settings"
-              aria-label={`Profile — ${businessName}`}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-[13px] font-medium text-ink"
+              aria-label={`Profile and settings — ${businessName}`}
+              className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-[13px] font-medium text-ink transition-transform hover:scale-105"
             >
-              {initials || "R"}
+              {logoUrl && !logoFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={`${businessName} logo`}
+                  className="h-full w-full object-contain p-1"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                initials || "R"
+              )}
             </Link>
           </div>
 
@@ -125,9 +142,25 @@ export function AppShell({
             className="anim-fade absolute inset-y-0 right-0 flex w-[86%] max-w-[360px] flex-col bg-surface shadow-[var(--shadow-2)]"
           >
             <div className="flex items-center justify-between border-b border-line px-5 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-[14.5px] font-medium text-ink">{businessName}</p>
-                <p className="truncate text-[12px] text-ink-3">{email}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                {logoUrl && !logoFailed ? (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={logoUrl}
+                      alt=""
+                      className="h-full w-full object-contain p-0.5"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-[12px] font-medium text-ink">
+                    {initials || "R"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-[14.5px] font-medium text-ink">{businessName}</p>
+                  <p className="truncate text-[12px] text-ink-3">{email}</p>
+                </div>
               </div>
               <button
                 ref={closeRef}

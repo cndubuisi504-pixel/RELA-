@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("name, setup_completed_at")
+    .select("name, setup_completed_at, logo_url")
     .eq("owner_id", user.id)
     .maybeSingle();
 
@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AppShell
       businessName={business.name}
+      logoUrl={business.logo_url}
       ownerName={profile?.full_name ?? ""}
       email={user.email ?? ""}
     >
