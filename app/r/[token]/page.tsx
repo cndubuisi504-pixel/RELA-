@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatKobo } from "@/lib/money";
 import { typeMeta, effectiveStatus, type DocType } from "@/lib/documents/status";
@@ -35,7 +36,7 @@ async function loadDocument(token: string): Promise<PublicDoc | null> {
   if (!/^[a-f0-9]{16,64}$/i.test(token)) return null;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("public_document", { p_token: token });
-  if (error || !data) return null;
+  if (error || !data) notFound();
   return data as PublicDoc;
 }
 

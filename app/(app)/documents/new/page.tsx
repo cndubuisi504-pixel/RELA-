@@ -37,16 +37,10 @@ export default async function NewDocumentPage({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-medium text-ink">Filling this in, quickly</h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
-          Enter the customer and the items, and we’ll number and format everything. Products can add
-          a <strong className="font-medium text-ink-2">delivery fee</strong> in Totals; in Services
-          mode use <strong className="font-medium text-ink-2">“Add service”</strong> for as many rows
-          as the job needs. Discounts and VAT adjust the total at the bottom.
-        </p>
-      </div>
+    <div className="space-y-2">
+      <p className="text-center text-[12px] leading-relaxed text-ink-3" role="note">
+        Products can add a delivery fee in Totals · “Add service” adds more rows in Services mode.
+      </p>
       <DocumentEditor
         type={type}
         defaultMode={business.default_mode === "service" ? "service" : "product"}

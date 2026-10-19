@@ -176,16 +176,9 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-line bg-surface p-4" aria-label="How the numbers work">
-        <h2 className="text-[14px] font-medium text-ink">How the numbers work</h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
-          <strong className="font-medium text-ink-2">Collected</strong> is money that has actually
-          reached you — totals across the receipts you’ve issued.{" "}
-          <strong className="font-medium text-ink-2">Outstanding</strong> is what customers still
-          owe on invoices. A ₦150,000 receipt with ₦0 paid stays out of Collected until you record
-          the payment.
-        </p>
-      </section>
+      <p className="text-center text-[12px] leading-relaxed text-ink-3" role="note">
+        Collected = money received (receipts) · Outstanding = money still owed to you (invoices).
+      </p>
 
       {/* Filters */}
       <div className="-mx-5 overflow-x-auto px-5">

@@ -81,7 +81,9 @@ res = await p2.goto(`${base}/documents`, { waitUntil: "commit" });
 check("tenant2 documents list loads empty-state", res?.status() === 200);
 
 /* ------------------------------------------------------- expired quotation
-   shows Expired on the public verify page */
+   shows Expired on the public verify page. Other suites may have left a
+   monthly usage row behind — clear it so the quota trigger can't block us. */
+await rest(`document_usage?business_id=eq.${QA_BIZ}`, { method: "DELETE" });
 const token = crypto.randomBytes(16).toString("hex");
 const [expired] = await rest("documents", {
   method: "POST",

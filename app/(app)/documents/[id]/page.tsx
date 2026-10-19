@@ -426,17 +426,11 @@ export default async function DocumentDetail({
         />
       </div>
 
-      <p className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-center text-[12px] leading-relaxed text-ink-3">
-        “Share” builds the PDF on your phone and hands it straight to WhatsApp — nothing to save
-        manually. “Copy public link” gives the customer a live page where they can verify this
-        document any time.
-        {type === "quotation" && showConvert && (
-          <>
-            <br />
-            Customer accepted? Use <strong className="font-medium text-ink-2">“Accept &amp; convert
-            to invoice”</strong> above — it turns this quotation into a payable invoice.
-          </>
-        )}
+      <p className="text-center text-[12px] leading-relaxed text-ink-3" role="note">
+        Share attaches the PDF in WhatsApp; copy link gives the customer a verify page.
+        {type === "quotation" &&
+          showConvert &&
+          " Customer accepted? Convert to invoice above."}
       </p>
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
         PDFs on the free plan carry a small rela. mark — Starter removes it.
