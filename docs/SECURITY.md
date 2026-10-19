@@ -27,4 +27,4 @@ server + the live QA suite (RLS/cross-tenant 6/6, Paystack webhook 8/8, admin ga
 ## Open items (non-blocking)
 - CSP rollout (report-only first) — needs asset audit of the capture/print pipeline.
 - Application-layer rate limiting for document write routes if automated abuse emerges.
-- Business-name misuse guard — design under discussion with the owner (warn-and-confirm vs hard block list).
+- Business-name misuse guard — three-layer design (hard-block list / warn-confirm / admin flag) agreed in principle; **owner deferred it (2026-10-19)** — revisit after more users sign up.
