@@ -28,3 +28,25 @@ server + the live QA suite (RLS/cross-tenant 6/6, Paystack webhook 8/8, admin ga
 - CSP rollout (report-only first) — needs asset audit of the capture/print pipeline.
 - Application-layer rate limiting for document write routes if automated abuse emerges.
 - Business-name misuse guard — three-layer design (hard-block list / warn-confirm / admin flag) agreed in principle; **owner deferred it (2026-10-19)** — revisit after more users sign up.
+
+---
+
+## Sweep — 2026-10-19 (pre-redesign-sign-off)
+
+Re-run against production after the receipt-rule + share-sheet release.
+All green:
+
+| Area | Result |
+| --- | --- |
+| HTTP headers | HSTS, `X-Frame-Options: DENY`, `nosniff`, strict referrer policy, camera/mic/geo off |
+| Auth gates | `/dashboard`, `/documents*`, `/analytics`, `/settings` all 307 → login when signed out |
+| Public verify pages | bogus tokens 404; no business data in the body |
+| Webhook | unsigned/fake Paystack payloads rejected (`bad signature`) |
+| Stored XSS | `<script>alert(1)</script>` as an item name renders as inert text; zero dialogs fired in a real browser |
+| RLS | anon key reads `[]` from every private table |
+| Secrets | only `.env.example` (placeholders) tracked; service key never referenced in client components |
+| DB integrity | `documents_direct_receipt_fully_paid` now enforced — partially-paid direct receipts are rejected at the database layer, not just the UI |
+
+Standing advisories (unchanged): no app-level rate limiting (platform DDoS
+protection only); CSP still report-only-candidate; business-name misuse guard
+deferred by owner decision.
