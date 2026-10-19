@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ThemeToggle } from "@/components/branding/ThemeToggle";
-import { formatKobo } from "@/lib/money";
 import { ArrowRightIcon } from "@/components/ui/icons";
+import { BusinessSettingsForm } from "@/components/settings/BusinessSettingsForm";
+import { LoginSettingsForm } from "@/components/settings/LoginSettingsForm";
 
 export const metadata = { title: "Settings" };
 
@@ -15,7 +16,9 @@ export default async function SettingsPage() {
   const [{ data: business }, { data: profile }] = await Promise.all([
     supabase
       .from("businesses")
-      .select("name, address, phone, email, logo_url, bank_name, bank_account_number, default_mode, default_theme")
+      .select(
+        "name, address, phone, email, logo_url, bank_name, bank_account_name, bank_account_number, default_mode, default_theme",
+      )
       .eq("owner_id", user!.id)
       .maybeSingle(),
     supabase
@@ -25,38 +28,37 @@ export default async function SettingsPage() {
       .maybeSingle(),
   ]);
 
-  const rows = [
-    { label: "Business name", value: business?.name },
-    { label: "Address", value: business?.address },
-    { label: "Phone", value: business?.phone },
-    { label: "Email", value: business?.email || "Not set" },
-    { label: "Default mode", value: business?.default_mode === "service" ? "Services" : "Products" },
-    { label: "Document theme", value: business?.default_theme },
-    { label: "Bank", value: business?.bank_name ? `${business.bank_name} · ${business.bank_account_number}` : "Not set" },
-  ];
-
   const active = profile?.plan === "starter" && profile?.subscription_status === "active";
+  const renewsOn = profile?.subscription_ends_at
+    ? new Date(profile.subscription_ends_at).toLocaleDateString("en-NG", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : null;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-[26px] font-medium leading-tight tracking-[-0.03em] text-ink">Settings</h1>
-        <p className="mt-1 text-[13.5px] text-ink-3">{user?.email}</p>
+        <p className="mt-1 text-[13.5px] text-ink-3">
+          Your business identity, payments and sign-in — everything here feeds your documents.
+        </p>
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-line bg-surface">
-        <div className="border-b border-line px-4 py-3">
-          <h2 className="text-[14px] font-medium text-ink">Business information</h2>
-        </div>
-        <dl className="divide-y divide-line">
-          {rows.map((r) => (
-            <div key={r.label} className="flex items-start justify-between gap-4 px-4 py-3">
-              <dt className="text-[13px] text-ink-3">{r.label}</dt>
-              <dd className="max-w-[60%] text-right text-[13.5px] text-ink">{r.value || "—"}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <BusinessSettingsForm
+        business={{
+          name: business?.name ?? null,
+          address: business?.address ?? null,
+          phone: business?.phone ?? null,
+          email: business?.email ?? null,
+          default_mode: business?.default_mode ?? null,
+          default_theme: business?.default_theme ?? null,
+          bank_name: business?.bank_name ?? null,
+          bank_account_name: business?.bank_account_name ?? null,
+          bank_account_number: business?.bank_account_number ?? null,
+        }}
+      />
 
       <section className="rounded-2xl border border-line bg-surface p-4">
         <div className="flex items-center justify-between gap-4">
@@ -71,11 +73,16 @@ export default async function SettingsPage() {
       <section className="rounded-2xl border border-line bg-surface p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-[14px] font-medium text-ink">Subscription</h2>
-            <p className="mt-0.5 text-[12.5px] text-ink-3">
-              {active
-                ? "Starter · active"
-                : "Free · 5 documents per month"}
+            <h2 className="text-[14px] font-medium text-ink">Plan</h2>
+            <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-3">
+              {active ? (
+                <>
+                  Starter · active
+                  {renewsOn ? ` · renews ${renewsOn}` : ""}
+                </>
+              ) : (
+                "Free · 5 documents per month"
+              )}
             </p>
           </div>
           <Link
@@ -88,12 +95,13 @@ export default async function SettingsPage() {
         </div>
       </section>
 
+      <LoginSettingsForm currentEmail={user?.email ?? ""} />
+
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-medium text-ink">Need a hand?</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
-          Editing business details after setup, changing your logo, and exporting your data are
-          coming in the next release. For any of them today, message support and we&apos;ll do it
-          with you.
+          Your logo, a special document layout, or exporting all your data — tell us what you need
+          and we&apos;ll set it up with you.
         </p>
         <Link href="/support" className="btn btn-ghost btn-sm mt-3">
           Contact support

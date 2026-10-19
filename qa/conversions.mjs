@@ -13,6 +13,7 @@ const ctx = await browser.newContext({
   isMobile: true,
   hasTouch: true,
 });
+await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push("PAGEERROR " + e.message));
@@ -166,7 +167,10 @@ await step("converted receipt verifies anonymously", async () => {
   await page.goto(seen.receiptUrl2, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: /share receipt/i }).click();
   const sheet = page.getByRole("dialog", { name: /share receipt/i });
-  const link = await sheet.getByRole("link", { name: /open public page/i }).getAttribute("href");
+  await sheet.getByText("Copy public link").click();
+  await page.waitForTimeout(600);
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  if (!/^https?:\/\/.*\/r\//.test(link)) throw new Error("clipboard has no /r/ link: " + link);
   await sheet.getByRole("button", { name: /close/i }).click();
   await anon.goto(link.startsWith("http") ? link : base + link, { waitUntil: "networkidle" });
   const body = await anon.locator("body").innerText();

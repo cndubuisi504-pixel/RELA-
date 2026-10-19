@@ -14,6 +14,7 @@ export type NewDocumentInput = {
   items: { name: string; description: string; quantity: string; unitPrice: string }[];
   discount: string;
   tax: string;
+  delivery: string;
   amountPaid: string;
   paymentMethod: string;
   dueDate: string;
@@ -67,6 +68,7 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
 
   const discountKobo = nairaToKobo(input.discount);
   const taxKobo = nairaToKobo(input.tax);
+  const deliveryKobo = input.mode === "product" ? nairaToKobo(input.delivery) : 0;
   const paidKobo = nairaToKobo(input.amountPaid);
   if (discountKobo < 0 || taxKobo < 0 || paidKobo < 0) {
     return { ok: false, error: "Amounts can’t be negative." };
@@ -90,6 +92,7 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
     })),
     p_discount_kobo: discountKobo,
     p_tax_kobo: taxKobo,
+    p_delivery_kobo: deliveryKobo,
     p_amount_paid_kobo: paidKobo,
     p_payment_method: input.paymentMethod.trim() || null,
     p_due_date: input.type === "invoice" && input.dueDate ? input.dueDate : null,

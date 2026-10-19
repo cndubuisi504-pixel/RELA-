@@ -56,7 +56,7 @@ export default async function DocumentDetail({
   const { data: doc } = await supabase
     .from("documents")
     .select(
-      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public, source_document_id, converted_to_document_id, receipt_for_payment_kobo",
+      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, delivery_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public, source_document_id, converted_to_document_id, receipt_for_payment_kobo",
     )
     .eq("id", id)
     .maybeSingle();
@@ -265,6 +265,12 @@ export default async function DocumentDetail({
                 <dd className="num text-ink">{formatKobo(thisPayment)}</dd>
               </div>
             )}
+            {doc.delivery_kobo > 0 && (
+              <div className="flex justify-between text-ink-2">
+                <dt>Delivery</dt>
+                <dd className="num text-ink">{formatKobo(doc.delivery_kobo)}</dd>
+              </div>
+            )}
             {type !== "quotation" && (
               <div className="flex justify-between text-ink-2">
                 <dt>{type === "receipt" && showTotalPaid ? "Paid in total" : "Paid"}</dt>
@@ -420,6 +426,18 @@ export default async function DocumentDetail({
         />
       </div>
 
+      <p className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-center text-[12px] leading-relaxed text-ink-3">
+        “Share” builds the PDF on your phone and hands it straight to WhatsApp — nothing to save
+        manually. “Copy public link” gives the customer a live page where they can verify this
+        document any time.
+        {type === "quotation" && showConvert && (
+          <>
+            <br />
+            Customer accepted? Use <strong className="font-medium text-ink-2">“Accept &amp; convert
+            to invoice”</strong> above — it turns this quotation into a payable invoice.
+          </>
+        )}
+      </p>
       <p className="pb-4 text-center text-[11.5px] leading-relaxed text-ink-3">
         PDFs on the free plan carry a small rela. mark — Starter removes it.
       </p>

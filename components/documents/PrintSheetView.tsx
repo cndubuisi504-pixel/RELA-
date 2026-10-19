@@ -47,6 +47,7 @@ export function PrintSheetView({
   if (hasBreakdown) totals.push(["Subtotal", formatKobo(doc.subtotal_kobo)]);
   if (doc.discount_kobo > 0) totals.push(["Discount", `− ${formatKobo(doc.discount_kobo)}`]);
   if (doc.tax_kobo > 0) totals.push(["Tax", `+ ${formatKobo(doc.tax_kobo)}`]);
+  if (doc.delivery_kobo > 0) totals.push(["Delivery", `+ ${formatKobo(doc.delivery_kobo)}`]);
 
   return (
   <article className="print-sheet" aria-label={`${meta.label} ${doc.document_number}`}>

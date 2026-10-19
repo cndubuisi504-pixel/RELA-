@@ -3,6 +3,7 @@ import { chromium } from "playwright";
 const base = "http://localhost:3000";
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push("PAGEERROR " + e.message));
@@ -159,7 +160,10 @@ await step("document number format", async () => {
 await step("public verification page renders without auth", async () => {
   await page.getByRole("button", { name: /share receipt/i }).click();
   const sheet = page.getByRole("dialog", { name: /share receipt/i });
-  const link = await sheet.getByRole("link", { name: /open public page/i }).getAttribute("href");
+  await sheet.getByText("Copy public link").click();
+  await page.waitForTimeout(600);
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  if (!/^https?:\/\/.*\/r\//.test(link)) throw new Error("clipboard has no /r/ link: " + link);
   await sheet.getByRole("button", { name: /close/i }).click();
   const anon = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const p2 = await anon.newPage();

@@ -48,6 +48,7 @@ await page.getByRole("button", { name: /^product$/i }).click();
 await page.getByLabel(/^Name/i).first().fill("Earlier Client");
 await page.getByLabel("Item name").first().fill("Full website design + setup");
 await page.getByLabel("Unit price for row 1").fill("150000");
+await page.getByLabel("Delivery fee").fill("2500");
 await page.getByRole("button", { name: /^save receipt$/i }).click();
 await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 60000 });
 const docUrl = page.url().split("?")[0];
@@ -72,7 +73,8 @@ check("₦0-paid receipt shows 'No payment received yet.'",
   /No payment received yet\./.test(summaryText), summaryText.match(/payment received yet\./i)?.[0] ?? "");
 check("₦0-paid receipt does NOT claim 'Paid via …'",
   !/Paid via/i.test(summaryText));
-check("Balance line reads ₦150,000", /Balance[\s\S]{0,20}150,000/.test(summaryText.replace(/₦\s?/g, "₦")));
+check("Balance line reads ₦152,500", /Balance[\s\S]{0,20}152,500/.test(summaryText.replace(/₦\s?/g, "₦")), "with ₦2,500 delivery");
+check("Delivery row shows ₦2,500 next to the label", /Delivery[\s\S]{0,20}2,500/.test(summaryText));
 
 /* hidden capture host exists with a full print sheet inside */
 const hostInfo = await page.locator("#pdf-capture-root").evaluate((el) => ({
@@ -86,11 +88,13 @@ check("#pdf-capture-root is pre-rendered, hidden, and holds the print sheet",
 await page.getByRole("button", { name: /share receipt/i }).click();
 const sheet = page.getByRole("dialog", { name: /share receipt/i });
 check("one Share button opens the sheet", await sheet.isVisible());
-for (const item of ["Share PDF on WhatsApp", "Copy public link", "Open public page", "Save as PDF"]) {
+for (const item of ["Share PDF on WhatsApp", "Copy public link", "Save as PDF"]) {
   check(`sheet has “${item}”`, (await sheet.getByText(item, { exact: false }).count()) > 0);
 }
 check("the old 'Open public verification page' toolbar button is gone from the page",
   (await page.getByText("Open public verification page").count()) === 0);
+check("the sheet is now exactly three actions (WhatsApp PDF, copy link, save PDF)",
+  (await sheet.getByRole("link").count()) === 1, "only Save-as-PDF link left");
 
 /* copy link */
 await sheet.getByText("Copy public link").click();
@@ -135,8 +139,12 @@ await page.goto(`${docUrl}/print?noprint=1`, { waitUntil: "networkidle" });
 const sheetText = await page.locator(".print-sheet").innerText();
 check("print sheet shows explicit 'Amount paid ₦0'",
   /Amount paid\s+₦0\b/.test(sheetText.replace(/\s+/g, " ")), sheetText.match(/Amount paid[^\n]*/)?.[0]);
-check("print sheet shows 'Balance owed ₦150,000'",
-  /Balance owed\s+₦150,000/.test(sheetText.replace(/\s+/g, " ")));
+check("print sheet shows 'Delivery + ₦2,500' as its own row",
+  /Delivery\s+\+\s*₦2,500/.test(sheetText.replace(/\s+/g, " ")), sheetText.match(/Delivery[^\n]*/)?.[0]);
+check("print sheet carries the delivery into the total (₦152,500)",
+  /total\s*₦152,500/i.test(sheetText.replace(/\s+/g, " ")));
+check("print sheet shows 'Balance owed ₦152,500'",
+  /Balance owed\s+₦152,500/.test(sheetText.replace(/\s+/g, " ")));
 check("print sheet never claims 'Paid via' on ₦0 paid",
   !/Paid via/i.test(sheetText));
 await page.goto(docUrl, { waitUntil: "networkidle" });

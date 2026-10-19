@@ -61,6 +61,12 @@ export default async function DocumentsPage({
       <div>
         <h1 className="text-[26px] font-medium leading-tight tracking-[-0.03em] text-ink">Documents</h1>
         <p className="mt-1 text-[13.5px] text-ink-3">Everything you&apos;ve issued, newest first.</p>
+        <p className="mt-3 max-w-[56ch] rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-3">
+          Receipts <strong className="font-medium text-ink-2">prove</strong> payment, invoices{" "}
+          <strong className="font-medium text-ink-2">ask</strong> for it, quotations{" "}
+          <strong className="font-medium text-ink-2">price</strong> the job first. Open any row to
+          share it as a PDF on WhatsApp or copy its verified public link.
+        </p>
       </div>
 
       <div className="-mx-5 overflow-x-auto px-5">

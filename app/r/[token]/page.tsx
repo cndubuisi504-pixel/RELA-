@@ -23,6 +23,7 @@ type PublicDoc = {
   subtotal_kobo: number;
   discount_kobo: number;
   tax_kobo: number;
+  delivery_kobo: number;
   total_kobo: number;
   amount_paid_kobo: number;
   balance_remaining_kobo: number;
@@ -154,6 +155,12 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
                 <div className="flex justify-between text-ink-2">
                   <dt>VAT</dt>
                   <dd className="num text-ink">{formatKobo(doc.tax_kobo)}</dd>
+                </div>
+              )}
+              {doc.delivery_kobo > 0 && (
+                <div className="flex justify-between text-ink-2">
+                  <dt>Delivery</dt>
+                  <dd className="num text-ink">{formatKobo(doc.delivery_kobo)}</dd>
                 </div>
               )}
               <div className="flex items-baseline justify-between border-t border-line pt-2">

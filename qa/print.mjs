@@ -54,9 +54,18 @@ await step("sign in and grab a document id", async () => {
   await page.getByRole("button", { name: /^log in$/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 45000 });
   await page.goto(`${base}/documents`, { waitUntil: "networkidle" });
-  // Fully-paid invoice from the conversions QA run is ideal for the totals block.
-  const link = page.locator('a[href^="/documents/"]').first();
-  const href = await link.getAttribute("href");
+  let href = await page.locator('a[href^="/documents/"]').first().getAttribute("href").catch(() => null);
+  if (!href) {
+    // Suites are independent: seed one receipt ourselves if a previous suite cleaned up.
+    await page.goto(`${base}/documents/new?type=receipt`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /^product$/i }).click();
+    await page.getByLabel(/^Name/i).first().fill("Print Suite Client");
+    await page.getByLabel("Item name").first().fill("Print QA item");
+    await page.getByLabel("Unit price for row 1").fill("5000");
+    await page.getByRole("button", { name: /^save receipt$/i }).click();
+    await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 60000 });
+    href = page.url().match(/\/documents\/[0-9a-f-]{36}/)[0];
+  }
   docId = href.split("/")[2];
   if (!docId) throw new Error("no document link found");
 });

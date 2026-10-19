@@ -40,6 +40,7 @@ export function DocumentEditor({
 
   const [discount, setDiscount] = useState("");
   const [tax, setTax] = useState("");
+  const [delivery, setDelivery] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Bank transfer");
   const [dueDate, setDueDate] = useState("");
@@ -57,7 +58,10 @@ export function DocumentEditor({
   );
   const discountKobo = Math.round((Number(discount.replace(/[₦,\s]/g, "")) || 0) * 100);
   const taxKobo = Math.round((Number(tax.replace(/[₦,\s]/g, "")) || 0) * 100);
-  const total = Math.max(0, subtotal - discountKobo + taxKobo);
+  // Delivery fee is a product-mode charge (couriers/dispatch); services bill time instead.
+  const deliveryKobo =
+    mode === "product" ? Math.round((Number(delivery.replace(/[₦,\s]/g, "")) || 0) * 100) : 0;
+  const total = Math.max(0, subtotal - discountKobo + taxKobo + deliveryKobo);
   const paid = Math.min(Math.round((Number(amountPaid.replace(/[₦,\s]/g, "")) || 0) * 100), total);
   const balance = total - paid;
 
@@ -81,6 +85,7 @@ export function DocumentEditor({
         })),
         discount,
         tax,
+        delivery,
         amountPaid: type === "receipt" ? amountPaid : "0",
         paymentMethod: type === "receipt" ? paymentMethod : "",
         dueDate,
@@ -201,6 +206,24 @@ export function DocumentEditor({
               />
             </div>
           </div>
+          {mode === "product" && (
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="delivery" className="text-ink-2">
+                Delivery fee
+              </label>
+              <div className="relative w-[140px]">
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">₦</span>
+                <input
+                  id="delivery"
+                  value={delivery}
+                  onChange={(e) => setDelivery(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="0"
+                  className="min-h-10 w-full rounded-lg border border-line bg-surface pl-6 pr-2 text-right text-[14px] num text-ink"
+                />
+              </div>
+            </div>
+          )}
           <div className="flex items-baseline justify-between border-t border-line pt-2.5">
             <span className="font-medium text-ink">Total</span>
             <span className="num text-[19px] font-medium text-ink">{formatKobo(total)}</span>
