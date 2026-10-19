@@ -70,6 +70,23 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
   const taxKobo = nairaToKobo(input.tax);
   const deliveryKobo = input.mode === "product" ? nairaToKobo(input.delivery) : 0;
   const paidKobo = nairaToKobo(input.amountPaid);
+
+  // Receipts prove money received: a directly-created receipt must be paid in full.
+  // Partial or zero payment is an invoice's job; each payment there mints its own receipt.
+  if (input.type === "receipt") {
+    const subtotal = rows.reduce((sum, r) => {
+      const qty = Number(r.quantity) || 1;
+      return sum + Math.round(qty * Number(r.unitPrice) * 100);
+    }, 0);
+    const computedTotal = Math.max(0, subtotal - discountKobo + taxKobo + deliveryKobo);
+    if (paidKobo !== computedTotal) {
+      return {
+        ok: false,
+        error:
+          "A receipt is proof of payment — it needs the full total. If the customer hasn’t paid everything yet, create an invoice instead; each payment you record turns into its own receipt.",
+      };
+    }
+  }
   if (discountKobo < 0 || taxKobo < 0 || paidKobo < 0) {
     return { ok: false, error: "Amounts can’t be negative." };
   }
@@ -108,6 +125,13 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
       return {
         ok: false,
         error: "You’ve used all 5 free documents this month. Upgrade to Starter for unlimited documents.",
+      };
+    }
+    if (message.includes("direct_receipt_fully_paid") || message.includes("receipt_requires_full_payment")) {
+      return {
+        ok: false,
+        error:
+          "A receipt is proof of payment — it needs the full total. Use an invoice for partial payments.",
       };
     }
     if (message.includes("paid_exceeds_total")) {

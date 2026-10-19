@@ -41,7 +41,6 @@ export function DocumentEditor({
   const [discount, setDiscount] = useState("");
   const [tax, setTax] = useState("");
   const [delivery, setDelivery] = useState("");
-  const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("Bank transfer");
   const [dueDate, setDueDate] = useState("");
   const [validUntil, setValidUntil] = useState("");
@@ -62,8 +61,6 @@ export function DocumentEditor({
   const deliveryKobo =
     mode === "product" ? Math.round((Number(delivery.replace(/[₦,\s]/g, "")) || 0) * 100) : 0;
   const total = Math.max(0, subtotal - discountKobo + taxKobo + deliveryKobo);
-  const paid = Math.min(Math.round((Number(amountPaid.replace(/[₦,\s]/g, "")) || 0) * 100), total);
-  const balance = total - paid;
 
   function submit() {
     setError(null);
@@ -86,7 +83,8 @@ export function DocumentEditor({
         discount,
         tax,
         delivery,
-        amountPaid: type === "receipt" ? amountPaid : "0",
+        // Receipts are proof of payment: full total always (rule enforced in the action too).
+        amountPaid: type === "receipt" ? String(total / 100) : "0",
         paymentMethod: type === "receipt" ? paymentMethod : "",
         dueDate,
         validUntil,
@@ -235,15 +233,12 @@ export function DocumentEditor({
         <section className="rounded-2xl border border-line bg-surface p-4">
           <h2 className="text-[14px] font-medium text-ink">Payment</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <Field
-              label="Amount paid (₦)"
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-              inputMode="decimal"
-              placeholder={total ? String(total / 100) : "0"}
-              error={fieldErrors.amountPaid}
-              hint="Leave blank if the full total was paid."
-            />
+            <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2 px-3.5 py-3">
+              <span className="text-[13px] text-ink-2">Amount paid</span>
+              <span className="num text-[15px] font-medium text-[var(--success)]">
+                {formatKobo(total)}
+              </span>
+            </div>
             <div>
               <label htmlFor="payment-method" className="mb-1.5 block text-[13.5px] font-medium text-ink">
                 Payment method
@@ -260,12 +255,11 @@ export function DocumentEditor({
               </select>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5">
-            <span className="text-[13px] text-ink-2">Balance remaining</span>
-            <span className={`num text-[14px] font-medium ${balance > 0 ? "text-[var(--warning)]" : "text-[var(--success)]"}`}>
-              {formatKobo(balance)}
-            </span>
-          </div>
+          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-3">
+            A receipt proves the customer paid in full. Part-payment coming? Make an{" "}
+            <strong className="font-medium text-ink-2">invoice</strong> instead — every payment you
+            record on it turns into its own receipt.
+          </p>
         </section>
       )}
 

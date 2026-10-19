@@ -15,19 +15,6 @@ import { site } from "@/lib/site";
 
 export const metadata = { title: "Document" };
 
-/** Nigerian numbers get a country code; without a phone we open WhatsApp's share sheet. */
-function whatsappHref(phone: string | null, text: string): string {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  if (!digits) return `https://wa.me/?text=${text}`;
-  const normalized = digits.startsWith("234")
-    ? digits
-    : digits.startsWith("0")
-      ? `234${digits.slice(1)}`
-      : digits.length === 10
-        ? `234${digits}`
-        : digits;
-  return `https://wa.me/${normalized}?text=${text}`;
-}
 
 type LinkedDoc = { id: string; document_type: DocType; document_number: string };
 type ReceiptRow = {
@@ -108,24 +95,6 @@ export default async function DocumentDetail({
   // On a receipt, "paid in total" only adds information once there is more than one payment.
   const showTotalPaid =
     type !== "receipt" || (thisPayment !== null && doc.amount_paid_kobo > thisPayment);
-
-  const waText = encodeURIComponent(
-    [
-      `${meta.label} ${doc.document_number} from ${business?.name ?? "us"}`,
-      `Customer: ${doc.customer_name}`,
-      `Total: ${formatKobo(doc.total_kobo)}`,
-      type === "receipt" && doc.balance_remaining_kobo > 0
-        ? `Balance remaining: ${formatKobo(doc.balance_remaining_kobo)}`
-        : type === "invoice"
-          ? `Outstanding: ${formatKobo(doc.balance_remaining_kobo)}`
-          : "",
-      "",
-      `View and verify: ${publicUrl}`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-  );
-  const waCaption = decodeURIComponent(waText);
 
   const showConvert = type === "quotation" && doc.status !== "converted" && !doc.converted_to_document_id;
   const showPayment = type === "invoice" && doc.balance_remaining_kobo > 0;
@@ -420,8 +389,6 @@ export default async function DocumentDetail({
           documentNumber={doc.document_number}
           label={meta.label}
           publicUrl={publicUrl}
-          waCaption={waCaption}
-          waFallbackHref={whatsappHref(doc.customer_phone, waText)}
           printUrl={`/documents/${doc.id}/print`}
         />
       </div>

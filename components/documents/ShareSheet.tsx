@@ -2,45 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  CheckIcon,
-  CloseIcon,
-  PrintIcon,
-  WhatsAppIcon,
-} from "@/components/ui/icons";
+import { CheckIcon, CloseIcon, PrintIcon, WhatsAppIcon } from "@/components/ui/icons";
 
 type Props = {
   documentNumber: string;
   label: string; // "Receipt" | "Invoice" | "Quotation"
   publicUrl: string;
-  waCaption: string; // plain-text caption (short summary + public link)
-  waFallbackHref: string; // wa.me link (customer-targeted when a phone exists)
-  printUrl: string; // /documents/[id]/print (browser save-as-pdf route)
+  printUrl: string; // /documents/[id]/print — last-resort phone print flow
 };
 
-type Note = { tone: "ok" | "warn" | "error"; text: string } | null;
+type Note = { tone: "ok" | "info" | "error"; text: string } | null;
 
 /**
- * One Share button -> bottom sheet. The four actions (WhatsApp PDF, copy link,
- * open public page, save as PDF) live inside so the document page stops
- * showing a wall of buttons.
+ * Two actions, honest about how phones actually work:
+ *   1. Save PDF  — builds the real A4 document on-device and saves the file.
+ *      WhatsApp attach happens through the phone's own 📎 (reliable everywhere).
+ *   2. Copy link — the customer's live verification page.
  */
-export function ShareSheet({
-  documentNumber,
-  label,
-  publicUrl,
-  waCaption,
-  waFallbackHref,
-  printUrl,
-}: Props) {
+export function ShareSheet({ documentNumber, label, publicUrl, printUrl }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [note, setNote] = useState<Note>(null);
-  const [openWaHref, setOpenWaHref] = useState<string | null>(null);
-  const openRef = useRef<HTMLButtonElement>(null);
 
-  /* ---------- modal hygiene ---------- */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -59,11 +43,7 @@ export function ShareSheet({
     setNote(null);
   }, []);
 
-  /* ---------- PDF built from the hidden in-page print sheet ----------
-     The document page pre-renders an exact copy of the print sheet inside
-     #pdf-capture-root (display:none). We un-hide it under a "Preparing your
-     PDF" veil long enough to rasterise it, then hide it again. No popup, no
-     second navigation — popup blockers and small screens can't break this. */
+  /* PDF from the hidden in-page print sheet (no popup — phones can't block it). */
   async function buildPdf(): Promise<File> {
     const html2pdf = (await import("html2pdf.js")).default;
     const host = document.getElementById("pdf-capture-root");
@@ -86,7 +66,6 @@ export function ShareSheet({
       } catch {
         /* fonts API unavailable — capture anyway */
       }
-      // Two frames so the browser has painted the newly-visible sheet.
       await new Promise((r) =>
         requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 60))),
       );
@@ -118,33 +97,12 @@ export function ShareSheet({
     }
   }
 
-  /* ---------- actions ---------- */
-  async function sharePdfOnWhatsApp() {
+  async function savePdf() {
     if (busy) return;
     setBusy(true);
     setNote(null);
     try {
       const file = await buildPdf();
-      const nav = navigator as Navigator & {
-        canShare?: (data: { files?: File[] }) => boolean;
-        share?: (data: ShareData & { files?: File[] }) => Promise<void>;
-      };
-      if (nav.canShare?.({ files: [file] }) && nav.share) {
-        try {
-          await nav.share({
-            files: [file],
-            title: `${label} ${documentNumber}`,
-            text: waCaption,
-          });
-          close();
-          return;
-        } catch (err) {
-          if ((err as Error).name === "AbortError") return; // user backed out of the picker
-          throw err;
-        }
-      }
-      // No native file sharing (desktop browsers, older phones):
-      // hand the PDF over as a download, then open WhatsApp with the caption texted.
       const url = URL.createObjectURL(file);
       const a = document.createElement("a");
       a.href = url;
@@ -153,17 +111,14 @@ export function ShareSheet({
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      // A second window.open after async work gets popup-blocked on most
-      // browsers — surface a real button instead (the tap is a fresh gesture).
-      setOpenWaHref(waFallbackHref);
       setNote({
-        tone: "warn",
-        text: `PDF saved to downloads — this browser can't attach files to WhatsApp directly. Tap “Open WhatsApp”, then attach the PDF with the 📎 button in the chat.`,
+        tone: "info",
+        text: `Saved to your downloads. In WhatsApp, tap 📎 → Document (or Gallery/Files) and pick ${file.name}.`,
       });
     } catch {
       setNote({
         tone: "error",
-        text: "Couldn't build the PDF just now. “Save as PDF” below uses your phone's own print system and always works.",
+        text: "That didn’t save — use “open the print page” below instead; it always works.",
       });
     } finally {
       setBusy(false);
@@ -174,7 +129,6 @@ export function ShareSheet({
     try {
       await navigator.clipboard.writeText(publicUrl);
     } catch {
-      // Clipboard API blocked (rare, insecure context): select-and-copy fallback.
       const ta = document.createElement("textarea");
       ta.value = publicUrl;
       document.body.appendChild(ta);
@@ -183,15 +137,16 @@ export function ShareSheet({
       ta.remove();
     }
     setCopied(true);
-    setNote({ tone: "ok", text: "Link copied — paste it anywhere (WhatsApp, Instagram DM, email)." });
+    setNote({
+      tone: "ok",
+      text: "Link copied — paste it in WhatsApp, Instagram DM, anywhere.",
+    });
     setTimeout(() => setCopied(false), 2500);
   }
 
-  /* ---------- render ---------- */
   return (
     <>
       <button
-        ref={openRef}
         type="button"
         onClick={() => setOpen(true)}
         className="btn btn-primary"
@@ -218,9 +173,7 @@ export function ShareSheet({
                   Share {label.toLowerCase()} {documentNumber}
                 </p>
                 <p className="mt-0.5 text-[12.5px] text-ink-3">
-                  {label === "Receipt"
-                    ? "Send proof of payment to your customer."
-                    : "Send this to your customer — the link lets them verify it."}
+                  Save the PDF, then attach it in WhatsApp 📎 — or simply send the link.
                 </p>
               </div>
               <button
@@ -234,21 +187,21 @@ export function ShareSheet({
             </div>
 
             <div className="mt-4 space-y-2">
-              {/* 1 — primary: PDF over WhatsApp */}
+              {/* 1 — primary: save the PDF to the phone */}
               <button
                 type="button"
-                onClick={sharePdfOnWhatsApp}
+                onClick={savePdf}
                 disabled={busy}
                 className="btn w-full justify-start gap-3 border border-[color:#21c06333] bg-[#21c063] px-4 text-white hover:bg-[#1db25b] disabled:opacity-60"
               >
-                <WhatsAppIcon size={19} />
+                <PrintIcon size={19} />
                 <span className="flex flex-col items-start">
                   <span className="text-[15px] font-semibold">
-                    {busy ? "Preparing your PDF…" : "Share PDF on WhatsApp"}
+                    {busy ? "Preparing your PDF…" : "Save PDF"}
                   </span>
                   {!busy && (
                     <span className="text-[11.5px] font-normal opacity-90">
-                      Attaches the real PDF — customer just taps download
+                      Downloads to your phone — attach it in WhatsApp with 📎
                     </span>
                   )}
                 </span>
@@ -266,38 +219,19 @@ export function ShareSheet({
                     {copied ? "Copied!" : "Copy public link"}
                   </span>
                   <span className="text-[11.5px] font-normal text-ink-3">
-                    For Instagram DMs, email, anywhere else
+                    Your customer can open and verify this {label.toLowerCase()} anywhere
                   </span>
                 </span>
               </button>
-
-              {/* 3 — save / print */}
-              <Link
-                href={printUrl}
-                onClick={close}
-                className="btn btn-ghost w-full justify-start gap-3"
-              >
-                <PrintIcon size={16} />
-                <span className="flex flex-col items-start">
-                  <span className="text-[15px] font-medium">Save as PDF</span>
-                  <span className="text-[11.5px] font-normal text-ink-3">
-                    Uses your phone's print — good for saving to Files or printing
-                  </span>
-                </span>
-              </Link>
             </div>
 
-            {openWaHref && (
-              <a
-                href={openWaHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn mt-2.5 w-full justify-start gap-3 border border-[color:#21c06355] bg-[#21c06322] text-[#128c4a]"
-              >
-                <WhatsAppIcon size={17} />
-                Open WhatsApp with the link texted
-              </a>
-            )}
+            <p className="mt-3 text-center text-[11.5px] text-ink-3">
+              Trouble saving?{" "}
+              <Link href={printUrl} onClick={close} className="text-[var(--accent-text)] underline underline-offset-2">
+                open the print page
+              </Link>{" "}
+              and use your phone’s print → PDF.
+            </p>
 
             {note && (
               <p
@@ -306,8 +240,7 @@ export function ShareSheet({
                   "mt-3 rounded-xl border px-3.5 py-2.5 text-[12.5px] leading-relaxed",
                   note.tone === "ok" &&
                     "border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success)]",
-                  note.tone === "warn" &&
-                    "border-line bg-[var(--key-bg)] text-ink-2",
+                  note.tone === "info" && "border-line bg-[var(--key-bg)] text-ink-2",
                   note.tone === "error" &&
                     "border-[var(--danger-border,#f2c1c1)] bg-[var(--danger-bg,#fdeeee)] text-[var(--danger,#b3261e)]",
                 ]
@@ -324,7 +257,6 @@ export function ShareSheet({
   );
 }
 
-/* Small inline glyphs for actions that have no library icon. */
 function LinkIconGlyph() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
