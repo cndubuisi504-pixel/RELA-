@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckIcon, ArrowDownIcon } from "@/components/ui/icons";
 import { DocumentVisual } from "@/components/landing/DocumentVisual";
+import { site } from "@/lib/site";
 
 const assurances = ["No card needed", "5 free documents", "Works on any phone"];
 
@@ -28,8 +29,7 @@ export function Hero() {
           </h1>
 
           <p className="lede mt-6 max-w-[48ch]">
-            Rela helps small businesses create professional documents, share them with
-            customers, and keep every payment record organized.
+            {site.description}
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">

@@ -17,9 +17,11 @@ export async function POST(request: Request) {
   const raw = await request.text();
   const signature = request.headers.get("x-paystack-signature") ?? "";
   const expected = crypto.createHmac("sha512", secret).update(raw).digest("hex");
+  const sigBuf = Buffer.from(signature, "utf8");
+  const expBuf = Buffer.from(expected, "utf8");
   const ok =
-    signature.length === expected.length &&
-    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    sigBuf.length === expBuf.length &&
+    crypto.timingSafeEqual(sigBuf, expBuf);
   if (!ok) return NextResponse.json({ error: "bad signature" }, { status: 401 });
 
   let event: { event?: string; data?: { reference?: string; metadata?: { user_id?: string } } };

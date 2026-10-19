@@ -78,7 +78,31 @@ export async function activateStarter(input: {
     return { ok: false, error: "That payment couldn’t be verified as completed." };
   }
 
+  // Ensure the payment belongs to the calling user
+  const metaUserId = data.metadata?.user_id;
+  if (metaUserId && metaUserId !== input.userId) {
+    return { ok: false, error: "This payment reference belongs to a different account." };
+  }
+
   const admin = createAdminClient();
+
+  // Idempotency: if this reference has already been activated, do not extend subscription again
+  const { data: existingSub } = await admin
+    .from("subscriptions")
+    .select("status, profile_id")
+    .eq("provider", "paystack")
+    .eq("provider_reference", input.reference)
+    .maybeSingle();
+
+  if (existingSub) {
+    if (existingSub.profile_id && existingSub.profile_id !== input.userId) {
+      return { ok: false, error: "This payment reference belongs to a different account." };
+    }
+    if (existingSub.status === "active") {
+      return { ok: true };
+    }
+  }
+
   const [{ data: business }, { data: profile }] = await Promise.all([
     admin.from("businesses").select("id").eq("owner_id", input.userId).maybeSingle(),
     admin.from("profiles").select("plan, subscription_status, subscription_ends_at").eq("id", input.userId).maybeSingle(),

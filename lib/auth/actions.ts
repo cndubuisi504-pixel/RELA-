@@ -1,9 +1,11 @@
 "use server";
 
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { site } from "@/lib/site";
+import { safeRedirectPath } from "@/lib/auth/redirect";
 
 export type AuthState = {
   error?: string;
@@ -82,7 +84,7 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
     return { error: "We couldn’t sign you in just now. Check your connection and retry.", values };
   }
 
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+  redirect(safeRedirectPath(next, "/dashboard"));
 }
 
 export async function logOut() {

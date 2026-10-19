@@ -1,3 +1,4 @@
+import { safeRedirectPath } from "@/lib/auth/redirect";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const target = next && next.startsWith("/") ? next : "/setup/business";
+      const target = safeRedirectPath(next, "/setup/business");
       return NextResponse.redirect(`${origin}${target}`);
     }
   }

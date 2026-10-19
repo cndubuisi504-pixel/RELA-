@@ -70,3 +70,23 @@ deferred by owner decision.
 Verification details: `docs/QA-2026-10-19.md` and `qa/currency.mjs`.
 Existing rate-limiting/CSP advisories above remain; passing checks do not make the
 application immune to every possible attack.
+
+
+## Security Hardening & Audit Sweep — 2026-10-19
+
+Targeted penetration test & hardening pass against API, DB triggers, auth redirects, and webhook handling:
+
+| Area | Status | Mitigation / Finding Resolution |
+|---|---|---|
+| Open redirect on login `next` (SEC-06) | RESOLVED | `safeRedirectPath` rejects protocol-relative URLs (`//`, `/\`), backslashes, and non-relative origins. Tested via Playwright with intercepted external probes. |
+| Direct REST quota bypass (SEC-04) | RESOLVED | Dropped `documents_insert_own` and revoked `INSERT ON documents` from public/authenticated. All document creation is enforced through the atomic `create_document_in_currency` / `convert_document` SECURITY DEFINER RPCs. |
+| Direct REST receipt rule bypass (SEC-04B) | RESOLVED | Direct REST inserts disallowed; receipts can only be created as fully paid or minted via legitimate invoice conversions. |
+| Expired Starter quota bypass (SEC-05) | RESOLVED | `enforce_free_document_limit()` trigger updated to verify `v_plan = 'starter' AND v_sub_status = 'active' AND (v_sub_ends IS NULL OR v_sub_ends > now())`. Expired or inactive accounts fall back to the 5-document monthly limit immediately. |
+| Sequence tampering via RPC (SEC-03, SEC-03B) | RESOLVED | `next_document_number` revoked from anon and authenticated users; restricted to `service_role`. Numbering is internal to document creation RPCs. |
+| Webhook signature exception handling (SEC-07) | RESOLVED | Timing-safe HMAC comparison checks byte length prior to `timingSafeEqual`, preventing 500 errors on non-ASCII signatures. |
+| Billing cross-account reference protection (SEC-01) | RESOLVED | `activateStarter` verifies `metadata.user_id` matches caller identity and prevents account reference hijacking. |
+| Billing reference replay (SEC-02) | RESOLVED | `activateStarter` enforces idempotency; replaying an already-active Paystack reference does not re-extend expiration. |
+| Row-Level Security on all 12 public tables | GREEN | All public tables have RLS enabled; cross-tenant reads/writes verified blocked. |
+| Secret key hygiene | GREEN | No live or test keys tracked in git; service role key never bundled in client assets. |
+
+Automated suite: `qa/security-audit.mjs` (35 automated security assertions passing).
