@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/documents/StatusBadge";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, asCurrency } from "@/lib/money";
 import { effectiveStatus, typeMeta, type DocType } from "@/lib/documents/status";
 import { CheckIcon, PrintIcon, ShieldCheckIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { ShareSheet } from "@/components/documents/ShareSheet";
@@ -43,7 +43,7 @@ export default async function DocumentDetail({
   const { data: doc } = await supabase
     .from("documents")
     .select(
-      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, delivery_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public, source_document_id, converted_to_document_id, receipt_for_payment_kobo",
+      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, mode, quantity_label, currency, payment_instructions, subtotal_kobo, discount_kobo, tax_kobo, delivery_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, visibility, customer_show_on_public, source_document_id, converted_to_document_id, receipt_for_payment_kobo",
     )
     .eq("id", id)
     .maybeSingle();
@@ -91,6 +91,7 @@ export default async function DocumentDetail({
   const publicUrl = `${site.url}/r/${doc.public_token}`;
   // Exact print sheet, pre-rendered hidden for the ShareSheet's in-page PDF capture.
   const printData = await loadPrintData(id);
+  const currency = asCurrency(doc.currency as string | null);
   const thisPayment = doc.receipt_for_payment_kobo;
   // On a receipt, "paid in total" only adds information once there is more than one payment.
   const showTotalPaid =
@@ -199,10 +200,10 @@ export default async function DocumentDetail({
                     <p className="mt-0.5 text-[11.5px] leading-snug text-ink-3">{item.description}</p>
                   )}
                   <p className="num mt-0.5 text-[11px] text-ink-3">
-                    {Number(item.quantity)} × {formatKobo(item.unit_price_kobo)}
+                    {Number(item.quantity)} × {formatKobo(item.unit_price_kobo, currency)}
                   </p>
                 </div>
-                <p className="num shrink-0 text-[13px] text-ink">{formatKobo(item.total_kobo)}</p>
+                <p className="num shrink-0 text-[13px] text-ink">{formatKobo(item.total_kobo, currency)}</p>
               </li>
             ))}
           </ul>
@@ -210,34 +211,34 @@ export default async function DocumentDetail({
           <dl className="mt-3 space-y-1.5 text-[12.5px]">
             <div className="flex justify-between text-ink-2">
               <dt>Subtotal</dt>
-              <dd className="num text-ink">{formatKobo(doc.subtotal_kobo)}</dd>
+              <dd className="num text-ink">{formatKobo(doc.subtotal_kobo, currency)}</dd>
             </div>
             {doc.discount_kobo > 0 && (
               <div className="flex justify-between text-ink-2">
                 <dt>Discount</dt>
-                <dd className="num text-ink">−{formatKobo(doc.discount_kobo)}</dd>
+                <dd className="num text-ink">−{formatKobo(doc.discount_kobo, currency)}</dd>
               </div>
             )}
             {doc.tax_kobo > 0 && (
               <div className="flex justify-between text-ink-2">
                 <dt>VAT</dt>
-                <dd className="num text-ink">{formatKobo(doc.tax_kobo)}</dd>
+                <dd className="num text-ink">{formatKobo(doc.tax_kobo, currency)}</dd>
               </div>
             )}
             <div className="flex items-baseline justify-between border-t border-line pt-2">
               <dt className="text-[13.5px] font-medium text-ink">Total</dt>
-              <dd className="num text-[17px] font-medium text-ink">{formatKobo(doc.total_kobo)}</dd>
+              <dd className="num text-[17px] font-medium text-ink">{formatKobo(doc.total_kobo, currency)}</dd>
             </div>
             {type === "receipt" && thisPayment !== null && (
               <div className="flex justify-between text-ink-2">
                 <dt>This payment</dt>
-                <dd className="num text-ink">{formatKobo(thisPayment)}</dd>
+                <dd className="num text-ink">{formatKobo(thisPayment, currency)}</dd>
               </div>
             )}
             {doc.delivery_kobo > 0 && (
               <div className="flex justify-between text-ink-2">
                 <dt>Delivery</dt>
-                <dd className="num text-ink">{formatKobo(doc.delivery_kobo)}</dd>
+                <dd className="num text-ink">{formatKobo(doc.delivery_kobo, currency)}</dd>
               </div>
             )}
             {type !== "quotation" && (
@@ -250,7 +251,7 @@ export default async function DocumentDetail({
                       : "num text-ink-3"
                   }
                 >
-                  {formatKobo(doc.amount_paid_kobo)}
+                  {formatKobo(doc.amount_paid_kobo, currency)}
                 </dd>
               </div>
             )}
@@ -258,7 +259,7 @@ export default async function DocumentDetail({
               <div className="flex justify-between text-ink-2">
                 <dt>Balance</dt>
                 <dd className="num font-medium text-[var(--warning)]">
-                  {formatKobo(doc.balance_remaining_kobo)}
+                  {formatKobo(doc.balance_remaining_kobo, currency)}
                 </dd>
               </div>
             )}
@@ -280,7 +281,14 @@ export default async function DocumentDetail({
             <p className="mt-2.5 text-[11.5px] text-ink-3">No payment received yet.</p>
           )}
 
-          {type === "invoice" && business?.bank_account_number && (
+          {(type === "invoice" || type === "quotation") && doc.balance_remaining_kobo > 0 && doc.payment_instructions && (
+            <div className="mt-3 rounded-xl bg-surface-2 p-3 text-[11.5px] leading-relaxed text-ink-2">
+              <p className="font-medium text-ink">How to pay</p>
+              <p className="mt-0.5 whitespace-pre-line [overflow-wrap:anywhere]">{doc.payment_instructions}</p>
+            </div>
+          )}
+
+          {type === "invoice" && currency === "NGN" && business?.bank_account_number && (
             <div className="mt-3 rounded-xl bg-surface-2 p-3 text-[11.5px] leading-relaxed text-ink-2">
               <p className="font-medium text-ink">Pay to</p>
               <p className="num mt-0.5">
@@ -363,7 +371,7 @@ export default async function DocumentDetail({
                     </span>
                   </span>
                   <span className="num shrink-0 text-[13px]">
-                    {formatKobo(r.receipt_for_payment_kobo ?? 0)}
+                    {formatKobo(r.receipt_for_payment_kobo ?? 0, currency)}
                   </span>
                 </Link>
               </li>
@@ -381,6 +389,7 @@ export default async function DocumentDetail({
             number={doc.document_number}
             balanceKobo={doc.balance_remaining_kobo}
             customerName={doc.customer_name}
+            currency={currency}
           />
         )}
         <StatusButtons documentId={doc.id} type={type} status={effStatus} />

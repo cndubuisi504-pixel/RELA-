@@ -64,6 +64,8 @@ export async function convertToInvoice(documentId: string): Promise<ConversionSt
 
   const created = data as { id: string };
   revalidatePath("/documents");
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
   revalidatePath(`/documents/${documentId}`);
   redirect(`/documents/${created.id}?converted=1`);
 }
@@ -117,6 +119,8 @@ export async function recordPayment(
 
   const receipt = data as { id: string };
   revalidatePath("/documents");
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
   revalidatePath(`/documents/${documentId}`);
   redirect(`/documents/${receipt.id}?payment=1`);
 }
@@ -148,6 +152,8 @@ export async function updateDocumentStatus(
   }
 
   revalidatePath("/documents");
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
   revalidatePath(`/documents/${documentId}`);
   return null;
 }

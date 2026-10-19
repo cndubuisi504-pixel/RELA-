@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, currencySymbol, type Currency } from "@/lib/money";
 import {
   lineTotalKobo,
   newItem,
@@ -22,6 +22,7 @@ type Props = {
   items: EditorItem[];
   onItemsChange: (items: EditorItem[]) => void;
   error?: string | null;
+  currency?: Currency;
 };
 
 const inputBase =
@@ -37,6 +38,7 @@ export function DocumentItemsEditor({
   items,
   onItemsChange,
   error,
+  currency = "NGN",
 }: Props) {
   // DOM ids come from useId, not the row key: keys are random and would differ
   // between the server render and hydration.
@@ -194,11 +196,11 @@ export function DocumentItemsEditor({
 
                   <div>
                     <label className="mb-1 block text-[11px] text-ink-3 sm:hidden">
-                      {isService ? "Rate (₦)" : "Unit price (₦)"}
+                      {`${isService ? "Rate" : "Unit price"} (${currencySymbol(currency)})`}
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">
-                        ₦
+                        {currencySymbol(currency)}
                       </span>
                       <input
                         value={item.unitPrice}
@@ -213,7 +215,7 @@ export function DocumentItemsEditor({
 
                   <div className="flex items-center justify-between sm:justify-end">
                     <span className="text-[11px] text-ink-3 sm:hidden">Amount</span>
-                    <span className="num text-[14px] font-medium text-ink">{formatKobo(total)}</span>
+                    <span className="num text-[14px] font-medium text-ink">{formatKobo(total, currency)}</span>
                   </div>
 
                   <div className="flex items-center justify-end gap-0.5">

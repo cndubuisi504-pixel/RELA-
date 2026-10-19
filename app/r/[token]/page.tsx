@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, asCurrency } from "@/lib/money";
 import { typeMeta, effectiveStatus, type DocType } from "@/lib/documents/status";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { Logo } from "@/components/branding/Logo";
@@ -20,6 +20,7 @@ type PublicDoc = {
   status: string;
   business: { name: string; logo_url: string | null; phone: string | null; email: string | null; address: string };
   customer_name: string | null;
+  currency: string;
   items: { name: string; description: string | null; quantity: number; unit_price_kobo: number; total_kobo: number }[];
   subtotal_kobo: number;
   discount_kobo: number;
@@ -28,6 +29,7 @@ type PublicDoc = {
   total_kobo: number;
   amount_paid_kobo: number;
   balance_remaining_kobo: number;
+  payment_instructions: string | null;
   due_date: string | null;
   valid_until: string | null;
 };
@@ -70,6 +72,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
   }
 
   const meta = typeMeta[doc.type];
+  const currency = asCurrency(doc.currency);
 
   return (
     <main id="main" className="min-h-dvh bg-canvas pb-10">
@@ -133,10 +136,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
                       <p className="mt-0.5 text-[11.5px] leading-snug text-ink-3">{item.description}</p>
                     )}
                     <p className="num mt-0.5 text-[11px] text-ink-3">
-                      {Number(item.quantity)} × {formatKobo(item.unit_price_kobo)}
+                      {Number(item.quantity)} × {formatKobo(item.unit_price_kobo, currency)}
                     </p>
                   </div>
-                  <p className="num shrink-0 text-[13px] text-ink">{formatKobo(item.total_kobo)}</p>
+                  <p className="num shrink-0 text-[13px] text-ink">{formatKobo(item.total_kobo, currency)}</p>
                 </li>
               ))}
             </ul>
@@ -144,29 +147,29 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
             <dl className="mt-3 space-y-1.5 text-[12.5px]">
               <div className="flex justify-between text-ink-2">
                 <dt>Subtotal</dt>
-                <dd className="num text-ink">{formatKobo(doc.subtotal_kobo)}</dd>
+                <dd className="num text-ink">{formatKobo(doc.subtotal_kobo, currency)}</dd>
               </div>
               {doc.discount_kobo > 0 && (
                 <div className="flex justify-between text-ink-2">
                   <dt>Discount</dt>
-                  <dd className="num text-ink">−{formatKobo(doc.discount_kobo)}</dd>
+                  <dd className="num text-ink">−{formatKobo(doc.discount_kobo, currency)}</dd>
                 </div>
               )}
               {doc.tax_kobo > 0 && (
                 <div className="flex justify-between text-ink-2">
                   <dt>VAT</dt>
-                  <dd className="num text-ink">{formatKobo(doc.tax_kobo)}</dd>
+                  <dd className="num text-ink">{formatKobo(doc.tax_kobo, currency)}</dd>
                 </div>
               )}
               {doc.delivery_kobo > 0 && (
                 <div className="flex justify-between text-ink-2">
                   <dt>Delivery</dt>
-                  <dd className="num text-ink">{formatKobo(doc.delivery_kobo)}</dd>
+                  <dd className="num text-ink">{formatKobo(doc.delivery_kobo, currency)}</dd>
                 </div>
               )}
               <div className="flex items-baseline justify-between border-t border-line pt-2">
                 <dt className="text-[13.5px] font-medium text-ink">Total</dt>
-                <dd className="num text-[18px] font-medium text-ink">{formatKobo(doc.total_kobo)}</dd>
+                <dd className="num text-[18px] font-medium text-ink">{formatKobo(doc.total_kobo, currency)}</dd>
               </div>
             </dl>
 
@@ -180,14 +183,21 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
               })} />
               {doc.status === "paid" ? (
                 <span className="num text-[12px] text-ink-3">
-                  Paid {formatKobo(doc.amount_paid_kobo)}
+                  Paid {formatKobo(doc.amount_paid_kobo, currency)}
                 </span>
               ) : (
                 <span className="num text-[12px] text-[var(--warning)]">
-                  Balance {formatKobo(doc.balance_remaining_kobo)}
+                  Balance {formatKobo(doc.balance_remaining_kobo, currency)}
                 </span>
               )}
             </div>
+
+            {doc.payment_instructions && doc.balance_remaining_kobo > 0 && (
+              <div className="mt-3 rounded-xl border border-line bg-surface-2 p-3 text-[12px] leading-relaxed text-ink-2">
+                <p className="font-medium text-ink">How to pay</p>
+                <p className="mt-0.5 whitespace-pre-line [overflow-wrap:anywhere]">{doc.payment_instructions}</p>
+              </div>
+            )}
 
             <p className="mt-4 text-[11px] leading-relaxed text-ink-3">
               This page confirms the document was issued through Rela and hasn&apos;t been altered

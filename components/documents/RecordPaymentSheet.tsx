@@ -2,24 +2,26 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { recordPayment, type PaymentState } from "@/lib/documents/conversions";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, currencySymbol, type Currency } from "@/lib/money";
 import { Alert } from "@/components/ui/Alert";
 import { Field } from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { CloseIcon } from "@/components/ui/icons";
 
-const methods = ["Cash", "Bank transfer", "POS", "Mobile money"] as const;
+const methods = ["Cash", "Bank transfer", "POS", "Mobile money", "Other"] as const;
 
 export function RecordPaymentSheet({
   documentId,
   number,
   balanceKobo,
   customerName,
+  currency,
 }: {
   documentId: string;
   number: string;
   balanceKobo: number;
   customerName: string;
+  currency: Currency;
 }) {
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<string>("Bank transfer");
@@ -79,7 +81,7 @@ export function RecordPaymentSheet({
 
             <div className="mt-3 rounded-xl bg-surface-2 px-3.5 py-2.5">
               <p className="text-[11.5px] text-ink-3">Outstanding balance</p>
-              <p className="num text-[19px] font-medium text-ink">{formatKobo(balanceKobo)}</p>
+              <p className="num text-[19px] font-medium text-ink">{formatKobo(balanceKobo, currency)}</p>
             </div>
 
             <form action={formAction} className="mt-4 space-y-4">
@@ -89,7 +91,7 @@ export function RecordPaymentSheet({
 
               <Field
                 name="amount"
-                label="Amount received (₦)"
+                label={`Amount received (${currencySymbol(currency)})`}
                 inputMode="decimal"
                 autoFocus
                 placeholder={String(balanceKobo / 100)}

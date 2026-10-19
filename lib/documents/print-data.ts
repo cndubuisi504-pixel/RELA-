@@ -11,9 +11,12 @@ export type PrintDoc = {
   issued_date: string;
   status: string;
   quantity_label: string;
+  currency: string;
+  payment_instructions: string | null;
   subtotal_kobo: number;
   discount_kobo: number;
   tax_kobo: number;
+  delivery_kobo: number;
   total_kobo: number;
   amount_paid_kobo: number;
   balance_remaining_kobo: number;
@@ -63,7 +66,7 @@ export async function loadPrintData(id: string): Promise<PrintData> {
   const { data: doc } = await supabase
     .from("documents")
     .select(
-      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, quantity_label, subtotal_kobo, discount_kobo, tax_kobo, delivery_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, receipt_for_payment_kobo",
+      "id, document_type, document_number, customer_name, customer_phone, issued_date, status, quantity_label, currency, payment_instructions, subtotal_kobo, discount_kobo, tax_kobo, delivery_kobo, total_kobo, amount_paid_kobo, balance_remaining_kobo, due_date, valid_until, terms, payment_method, public_token, receipt_for_payment_kobo",
     )
     .eq("id", id)
     .maybeSingle();

@@ -17,7 +17,7 @@ export default async function SettingsPage() {
     supabase
       .from("businesses")
       .select(
-        "name, address, phone, email, logo_url, bank_name, bank_account_name, bank_account_number, default_mode, default_theme",
+        "name, address, phone, email, logo_url, bank_name, bank_account_name, bank_account_number, default_mode, default_theme, default_currency, payment_instructions",
       )
       .eq("owner_id", user!.id)
       .maybeSingle(),
@@ -57,6 +57,8 @@ export default async function SettingsPage() {
           bank_name: business?.bank_name ?? null,
           bank_account_name: business?.bank_account_name ?? null,
           bank_account_number: business?.bank_account_number ?? null,
+          default_currency: business?.default_currency ?? null,
+          payment_instructions: business?.payment_instructions ?? null,
         }}
       />
 

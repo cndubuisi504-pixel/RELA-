@@ -40,9 +40,10 @@ await fetch("https://zglkbrivfkabmlhrllbf.supabase.co/rest/v1/profiles?id=eq.509
 });
 const ctx = await browser.newContext({ viewport: { width: 1024, height: 900 } });
 const page = await ctx.newPage();
-page.on("console", (m) => {
+const onConsole = (m) => {
   if (m.type() === "error") consoleErrors.push(m.text().slice(0, 200));
-});
+};
+page.on("console", onConsole);
 // Headless blocks window.print(); swallow the dialog rather than hang.
 page.on("dialog", (d) => d.dismiss());
 
@@ -122,12 +123,16 @@ await step("strangers are redirected away", async () => {
 });
 
 await step("unknown ids 404", async () => {
+  // A deliberate 404 produces expected browser/dev-framework error messages.
+  // Check its HTTP status; console assertions above cover the successful page.
+  page.off("console", onConsole);
   const res = await page.goto(`${base}/documents/00000000-0000-4000-8000-000000000000/print`, {
     waitUntil: "commit",
   });
   if (res.status() !== 404) throw new Error(`expected 404, got ${res.status()}`);
 });
 
-console.log(`\nconsole errors: ${consoleErrors.length ? consoleErrors.join("\n") : "none"}`);
+await page.waitForLoadState("networkidle");
 await browser.close();
+console.log(`\nconsole errors: ${consoleErrors.length ? consoleErrors.join("\n") : "none"}`);
 process.exit(consoleErrors.length ? 2 : 0);

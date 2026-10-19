@@ -10,20 +10,25 @@ import { createDocument } from "@/lib/documents/actions";
 import { typeMeta, type DocType } from "@/lib/documents/status";
 import {
   lineTotalKobo,
+  currencyOptions,
   newItem,
   type EditorItem,
   type EditorMode,
   type QuantityLabel,
 } from "@/lib/documents/editor-types";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, currencySymbol, type Currency } from "@/lib/money";
 
 export function DocumentEditor({
   type,
   defaultMode,
+  defaultCurrency,
+  defaultPaymentInstructions,
   quantityLabelDefault,
 }: {
   type: DocType;
   defaultMode: EditorMode;
+  defaultCurrency: Currency;
+  defaultPaymentInstructions: string;
   quantityLabelDefault: QuantityLabel;
 }) {
   const router = useRouter();
@@ -37,6 +42,8 @@ export function DocumentEditor({
   const [showQuantity, setShowQuantity] = useState(false);
   const [quantityLabel, setQuantityLabel] = useState<QuantityLabel>(quantityLabelDefault);
   const [items, setItems] = useState<EditorItem[]>([newItem()]);
+  const [currency, setCurrency] = useState<Currency>(defaultCurrency);
+  const [instructions, setInstructions] = useState(defaultPaymentInstructions);
 
   const [discount, setDiscount] = useState("");
   const [tax, setTax] = useState("");
@@ -55,11 +62,11 @@ export function DocumentEditor({
     () => items.reduce((sum, item) => sum + lineTotalKobo(item, quantityEnabled), 0),
     [items, quantityEnabled],
   );
-  const discountKobo = Math.round((Number(discount.replace(/[₦,\s]/g, "")) || 0) * 100);
-  const taxKobo = Math.round((Number(tax.replace(/[₦,\s]/g, "")) || 0) * 100);
+  const discountKobo = Math.round((Number(discount.replace(/[₦$£€,\s]/g, "")) || 0) * 100);
+  const taxKobo = Math.round((Number(tax.replace(/[₦$£€,\s]/g, "")) || 0) * 100);
   // Delivery fee is a product-mode charge (couriers/dispatch); services bill time instead.
   const deliveryKobo =
-    mode === "product" ? Math.round((Number(delivery.replace(/[₦,\s]/g, "")) || 0) * 100) : 0;
+    mode === "product" ? Math.round((Number(delivery.replace(/[₦$£€,\s]/g, "")) || 0) * 100) : 0;
   const total = Math.max(0, subtotal - discountKobo + taxKobo + deliveryKobo);
 
   function submit() {
@@ -74,6 +81,8 @@ export function DocumentEditor({
         mode,
         showQuantity,
         quantityLabel,
+        currency,
+        paymentInstructions: instructions,
         items: items.map((i) => ({
           name: i.name,
           description: i.description,
@@ -153,6 +162,39 @@ export function DocumentEditor({
         </div>
       </section>
 
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-medium text-ink">Currency</h2>
+        <div className="mt-3 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Currency">
+          {currencyOptions.map((c) => (
+            <label key={c.id} className="relative cursor-pointer">
+              <input
+                type="radio"
+                name="document-currency"
+                value={c.id}
+                checked={currency === c.id}
+                onChange={() => setCurrency(c.id)}
+                className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                aria-label={`${c.symbol} ${c.id}`}
+              />
+              <span
+                className={[
+                  "flex min-h-11 flex-col items-center justify-center rounded-xl border text-[13px] transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--primary)]",
+                currency === c.id
+                  ? "border-transparent bg-[var(--invert-bg)] font-medium text-[var(--invert-text)]"
+                  : "border-line bg-surface text-ink-2 hover:text-ink",
+                ].join(" ")}
+              >
+                <span className="text-[15px] leading-none">{c.symbol}</span>
+                <span className="mt-1 leading-none">{c.id}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
+          All amounts use this currency. Changing it doesn’t convert the numbers.
+        </p>
+      </section>
+
       <DocumentItemsEditor
         mode={mode}
         onModeChange={setMode}
@@ -160,6 +202,7 @@ export function DocumentEditor({
         onShowQuantityChange={setShowQuantity}
         quantityLabel={quantityLabel}
         onQuantityLabelChange={setQuantityLabel}
+        currency={currency}
         items={items}
         onItemsChange={setItems}
         error={fieldErrors.items}
@@ -170,14 +213,14 @@ export function DocumentEditor({
         <div className="mt-3 space-y-2.5 text-[14px]">
           <div className="flex justify-between text-ink-2">
             <span>Subtotal</span>
-            <span className="num text-ink">{formatKobo(subtotal)}</span>
+            <span className="num text-ink">{formatKobo(subtotal, currency)}</span>
           </div>
           <div className="flex items-center justify-between gap-3">
             <label htmlFor="discount" className="text-ink-2">
               Discount
             </label>
             <div className="relative w-[140px]">
-              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">₦</span>
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">{currencySymbol(currency)}</span>
               <input
                 id="discount"
                 value={discount}
@@ -193,7 +236,7 @@ export function DocumentEditor({
               VAT / tax
             </label>
             <div className="relative w-[140px]">
-              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">₦</span>
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">{currencySymbol(currency)}</span>
               <input
                 id="tax"
                 value={tax}
@@ -210,7 +253,7 @@ export function DocumentEditor({
                 Delivery fee
               </label>
               <div className="relative w-[140px]">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">₦</span>
+                <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink-3">{currencySymbol(currency)}</span>
                 <input
                   id="delivery"
                   value={delivery}
@@ -224,7 +267,7 @@ export function DocumentEditor({
           )}
           <div className="flex items-baseline justify-between border-t border-line pt-2.5">
             <span className="font-medium text-ink">Total</span>
-            <span className="num text-[19px] font-medium text-ink">{formatKobo(total)}</span>
+            <span className="num text-[19px] font-medium text-ink">{formatKobo(total, currency)}</span>
           </div>
         </div>
       </section>
@@ -236,7 +279,7 @@ export function DocumentEditor({
             <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2 px-3.5 py-3">
               <span className="text-[13px] text-ink-2">Amount paid</span>
               <span className="num text-[15px] font-medium text-[var(--success)]">
-                {formatKobo(total)}
+                {formatKobo(total, currency)}
               </span>
             </div>
             <div>
@@ -249,7 +292,7 @@ export function DocumentEditor({
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="min-h-12 w-full rounded-xl border border-line bg-surface px-3 text-[15px] text-ink"
               >
-                {["Bank transfer", "Cash", "Card", "USSD", "Mobile money", "Cheque"].map((m) => (
+                {["Bank transfer", "Cash", "Card", "USSD", "Mobile money", "Cheque", "Other"].map((m) => (
                   <option key={m}>{m}</option>
                 ))}
               </select>
@@ -292,8 +335,24 @@ export function DocumentEditor({
               </select>
             </div>
           </div>
+          <div className="mt-3">
+            <label htmlFor="payment-instructions" className="mb-1.5 block text-[13.5px] font-medium text-ink">
+              Payment instructions
+            </label>
+            <textarea
+              id="payment-instructions"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Bank / wire details, or a payment link from your provider"
+              className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-4"
+            />
+          </div>
           <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
-            Your bank details from setup appear on the invoice automatically.
+            Add details for an account or payment service you already use that accepts {currency}.
+            These instructions are shown to your customer; Rela doesn’t collect the payment.
+            Set reusable instructions in Settings.
           </p>
         </section>
       )}
@@ -309,6 +368,23 @@ export function DocumentEditor({
               onChange={(e) => setValidUntil(e.target.value)}
               hint="Quotations usually stay open for 14 to 30 days."
             />
+            <div className="mt-3">
+              <label htmlFor="payment-instructions" className="mb-1.5 block text-[13.5px] font-medium text-ink">
+                Payment instructions
+              </label>
+              <textarea
+                id="payment-instructions"
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Bank / wire details, or a payment link from your provider"
+                className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-4"
+              />
+              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-3">
+                How the customer pays if they accept — carried over when this becomes an invoice.
+              </p>
+            </div>
           </div>
         </section>
       )}

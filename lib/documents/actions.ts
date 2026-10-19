@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { DocType } from "@/lib/documents/status";
+import { CURRENCIES, type Currency } from "@/lib/money";
 
 export type NewDocumentInput = {
   type: DocType;
@@ -11,6 +12,8 @@ export type NewDocumentInput = {
   mode: "product" | "service";
   showQuantity: boolean;
   quantityLabel: "qty" | "hours" | "days" | "projects" | "sessions";
+  currency: string;
+  paymentInstructions: string;
   items: { name: string; description: string; quantity: string; unitPrice: string }[];
   discount: string;
   tax: string;
@@ -28,7 +31,7 @@ export type NewDocumentResult =
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
 function nairaToKobo(value: string): number {
-  const cleaned = value.replace(/[₦,\s]/g, "");
+  const cleaned = value.replace(/[₦$£€,\s]/g, "");
   if (!cleaned) return 0;
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return -1;
@@ -47,7 +50,7 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
       name: item.name.trim(),
       description: item.description.trim(),
       quantity: item.quantity.trim() || "1",
-      unitPrice: item.unitPrice.replace(/[₦,\s]/g, ""),
+      unitPrice: item.unitPrice.replace(/[₦$£€,\s]/g, ""),
     }))
     .filter((item) => item.name.length > 0 || Number(item.unitPrice) > 0);
 
@@ -66,6 +69,15 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
 
   if (Object.keys(fieldErrors).length) return { ok: false, error: "Check the highlighted fields.", fieldErrors };
 
+  const currency = input.currency ?? "NGN";
+  if (!(CURRENCIES as readonly string[]).includes(currency)) {
+    return { ok: false, error: "Choose NGN, USD, GBP or EUR for this document." };
+  }
+  const paymentInstructions =
+    input.type === "invoice" || input.type === "quotation"
+      ? (input.paymentInstructions ?? "").trim().slice(0, 500) || null
+      : null;
+
   const discountKobo = nairaToKobo(input.discount);
   const taxKobo = nairaToKobo(input.tax);
   const deliveryKobo = input.mode === "product" ? nairaToKobo(input.delivery) : 0;
@@ -79,7 +91,7 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
       return sum + Math.round(qty * Number(r.unitPrice) * 100);
     }, 0);
     const computedTotal = Math.max(0, subtotal - discountKobo + taxKobo + deliveryKobo);
-    if (paidKobo !== computedTotal) {
+    if (computedTotal <= 0 || paidKobo !== computedTotal) {
       return {
         ok: false,
         error:
@@ -87,13 +99,15 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
       };
     }
   }
-  if (discountKobo < 0 || taxKobo < 0 || paidKobo < 0) {
+  if (discountKobo < 0 || taxKobo < 0 || deliveryKobo < 0 || paidKobo < 0) {
     return { ok: false, error: "Amounts can’t be negative." };
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_document", {
+  const { data, error } = await supabase.rpc("create_document_in_currency", {
     p_type: input.type,
+    p_currency: currency as Currency,
+    p_payment_instructions: paymentInstructions,
     p_customer_name: input.customerName.trim(),
     p_customer_phone: input.customerPhone.trim() || null,
     p_customer_email: input.customerEmail.trim().toLowerCase() || null,
@@ -145,5 +159,6 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
   }
 
   const result = data as { id: string; number: string };
+
   return { ok: true, id: result.id, number: result.number };
 }

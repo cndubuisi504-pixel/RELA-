@@ -50,3 +50,23 @@ All green:
 Standing advisories (unchanged): no app-level rate limiting (platform DDoS
 protection only); CSP still report-only-candidate; business-name misuse guard
 deferred by owner decision.
+
+
+## Foreign-currency release — 2026-10-19
+
+- New document RPC is authenticated-only and derives the business from `auth.uid()`;
+  a second tenant cannot record a payment on another business's invoice.
+- Currency and payment instructions are saved inside the creation transaction;
+  conversions copy source currency inside their transaction. There is no silent
+  follow-up PATCH that could leave a document incorrectly denominated.
+- Payment updates lock the source invoice row. Supported currencies are validated
+  by the RPC and a database constraint.
+- Script-shaped payment instructions render as inert text on owner, PDF and public
+  pages. The public RPC remains a whitelisted projection; defaults stay in the
+  RLS-protected business table.
+- No account provisioning, payment collection, FX or automatic external-payment
+  confirmation is introduced. Account availability/fees remain with the provider.
+
+Verification details: `docs/QA-2026-10-19.md` and `qa/currency.mjs`.
+Existing rate-limiting/CSP advisories above remain; passing checks do not make the
+application immune to every possible attack.

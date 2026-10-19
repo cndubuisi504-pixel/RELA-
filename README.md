@@ -1,12 +1,12 @@
 # rela.
 
-Business documents for Nigerian small businesses — receipts, invoices and quotations,
+Business documents for businesses and freelancers — receipts, invoices and quotations,
 created in seconds, shared on WhatsApp, and verified with a public link.
 
-> **Now:** the full document loop works end to end — create, convert a quotation into
-> an invoice, take full or partial payments, and share a public verification link.
-> and save any document as a PDF from the phone — **Save as PDF** on the document
-> opens a print-ready A4 page (watermarked on the Free plan, clean on Starter).
+> **Now:** create receipts, invoices and quotations in **NGN, USD, GBP or EUR**;
+> convert quotations, record invoice payments, and share verification links or
+> save a PDF. Add your own **How to pay** instructions for external payments.
+> See [`docs/INTERNATIONAL.md`](docs/INTERNATIONAL.md) for the scope and limitations.
 
 
 ## Stack
@@ -14,14 +14,14 @@ created in seconds, shared on WhatsApp, and verified with a public link.
 - Next.js (App Router) + React + TypeScript
 - Tailwind CSS v4 with CSS-variable design tokens
 - Satoshi (display/UI) + Inter (numerals), self-hosted
-- Supabase (Postgres, Auth, RLS, Storage) — next stage
+- Supabase (Postgres, Auth, RLS, Storage)
 - Paystack subscriptions — test keys wired, live keys swap in Vercel
 
 ## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in when the backend pieces land
+cp .env.example .env.local   # configure locally; never commit real credentials
 npm run dev                  # http://localhost:3000
 ```
 
@@ -60,12 +60,15 @@ node qa/shots.mjs # desktop/mobile screenshots in both themes (needs playwright)
 | 8 | Conversions: quotation → invoice → receipt, partial payments, status actions | Built |
 | 8b | PDF export via print-ready A4 page | Built |
 | 9 | Paystack checkout + verified webhooks + expiry downgrade | Built (test keys) |
-| 10 | Analytics charts, admin dashboard, deployment | Planned |
+| 10 | Analytics charts, admin dashboard, deployment | Built |
+| 11 | NGN/USD/GBP/EUR documents, payment instructions, separate currency totals | Built |
 
 ### Money rules
 
-- Amounts are integer kobo everywhere; the database recomputes every total from the
+- Amounts are integer minor units (kobo/cents/pence; 100 per currency unit); the database recomputes every total from the
   line items and never trusts client math.
+- Direct receipts require full payment. Record partial payments against an invoice.
+- Different currencies are never added together; switching a document currency does not perform FX.
 - Converting a document does **not** use up the free monthly allowance (5 documents),
   because the vendor already spent it on the source document.
 - Document numbers are allocated per business, per type, per day:

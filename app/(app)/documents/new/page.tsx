@@ -1,3 +1,4 @@
+import { asCurrency } from "@/lib/money";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DocumentEditor } from "@/components/documents/DocumentEditor";
@@ -22,7 +23,7 @@ export default async function NewDocumentPage({
   const [{ data: business }, { data: profile }, { data: usage }] = await Promise.all([
     supabase
       .from("businesses")
-      .select("default_mode, setup_completed_at")
+      .select("default_mode, setup_completed_at, default_currency, payment_instructions")
       .eq("owner_id", user!.id)
       .maybeSingle(),
     supabase.from("profiles").select("plan, subscription_status").eq("id", user!.id).maybeSingle(),
@@ -44,6 +45,8 @@ export default async function NewDocumentPage({
       <DocumentEditor
         type={type}
         defaultMode={business.default_mode === "service" ? "service" : "product"}
+        defaultCurrency={asCurrency(business.default_currency)}
+        defaultPaymentInstructions={business.payment_instructions ?? ""}
         quantityLabelDefault="qty"
       />
     </div>

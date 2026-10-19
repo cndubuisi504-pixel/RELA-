@@ -39,6 +39,8 @@ export async function saveBusinessSettings(
   const email = clean(formData.get("email")).toLowerCase();
   const defaultMode = clean(formData.get("default_mode"));
   const defaultTheme = clean(formData.get("default_theme")) || "classic";
+  const defaultCurrency = clean(formData.get("default_currency")) || "NGN";
+  const paymentInstructions = clean(formData.get("payment_instructions")).replace(/\r\n?/g, "\n").slice(0, 500);
   const bankName = clean(formData.get("bank_name"));
   const bankAccountName = clean(formData.get("bank_account_name"));
   const bankAccountNumber = clean(formData.get("bank_account_number")).replace(/\s/g, "");
@@ -71,6 +73,8 @@ export async function saveBusinessSettings(
       email: email || null,
       default_mode: defaultMode === "service" ? "service" : "product",
       default_theme: ["classic", "bold", "minimal"].includes(defaultTheme) ? defaultTheme : "classic",
+      default_currency: ["NGN", "USD", "GBP", "EUR"].includes(defaultCurrency) ? defaultCurrency : "NGN",
+      payment_instructions: paymentInstructions || null,
       bank_name: bankName || null,
       bank_account_name: bankAccountName || null,
       bank_account_number: bankAccountNumber || null,

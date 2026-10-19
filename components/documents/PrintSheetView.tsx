@@ -1,5 +1,5 @@
 import { typeMeta } from "@/lib/documents/status";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, asCurrency } from "@/lib/money";
 import { site } from "@/lib/site";
 
 /**
@@ -34,20 +34,26 @@ export function PrintSheetView({
   watermark: boolean;
 }) {
   const meta = typeMeta[doc.document_type as keyof typeof typeMeta];
+  const currency = asCurrency(doc.currency as string | null);
   const thisPayment = doc.receipt_for_payment_kobo;
   const showTotalPaid =
     doc.document_type !== "receipt" || (thisPayment !== null && doc.amount_paid_kobo > thisPayment);
   const hasBreakdown = doc.discount_kobo > 0 || doc.tax_kobo > 0;
   const showBank =
     doc.document_type === "invoice" &&
+    currency === "NGN" &&
     doc.balance_remaining_kobo > 0 &&
     (business?.bank_name || business?.bank_account_number);
+  const showInstructions =
+    (doc.document_type === "invoice" || doc.document_type === "quotation") &&
+    doc.balance_remaining_kobo > 0 &&
+    !!doc.payment_instructions;
 
   const totals: [string, string][] = [];
-  if (hasBreakdown) totals.push(["Subtotal", formatKobo(doc.subtotal_kobo)]);
-  if (doc.discount_kobo > 0) totals.push(["Discount", `− ${formatKobo(doc.discount_kobo)}`]);
-  if (doc.tax_kobo > 0) totals.push(["Tax", `+ ${formatKobo(doc.tax_kobo)}`]);
-  if (doc.delivery_kobo > 0) totals.push(["Delivery", `+ ${formatKobo(doc.delivery_kobo)}`]);
+  if (hasBreakdown) totals.push(["Subtotal", formatKobo(doc.subtotal_kobo, currency)]);
+  if (doc.discount_kobo > 0) totals.push(["Discount", `− ${formatKobo(doc.discount_kobo, currency)}`]);
+  if (doc.tax_kobo > 0) totals.push(["Tax", `+ ${formatKobo(doc.tax_kobo, currency)}`]);
+  if (doc.delivery_kobo > 0) totals.push(["Delivery", `+ ${formatKobo(doc.delivery_kobo, currency)}`]);
 
   return (
   <article className="print-sheet" aria-label={`${meta.label} ${doc.document_number}`}>
@@ -143,10 +149,10 @@ export function PrintSheetView({
                     {Number(item.quantity)}
                   </td>
                   <td className="num py-3 pr-3 text-right align-top text-[#6b625c]">
-                    {formatKobo(item.unit_price_kobo)}
+                    {formatKobo(item.unit_price_kobo, currency)}
                   </td>
                   <td className="num py-3 text-right align-top font-medium">
-                    {formatKobo(item.total_kobo)}
+                    {formatKobo(item.total_kobo, currency)}
                   </td>
                 </tr>
               ))}
@@ -164,12 +170,12 @@ export function PrintSheetView({
               ))}
               <div className="flex items-baseline justify-between border-t-2 border-[#1a1512] pt-2.5">
                 <dt className="text-[12px] font-semibold uppercase tracking-[0.12em]">Total</dt>
-                <dd className="num text-[22px] font-semibold">{formatKobo(doc.total_kobo)}</dd>
+                <dd className="num text-[22px] font-semibold">{formatKobo(doc.total_kobo, currency)}</dd>
               </div>
               {thisPayment !== null && (
                 <div className="flex justify-between">
                   <dt className="text-[#6b625c]">This payment</dt>
-                  <dd className="num">{formatKobo(thisPayment)}</dd>
+                  <dd className="num">{formatKobo(thisPayment, currency)}</dd>
                 </div>
               )}
               {doc.document_type !== "quotation" && (
@@ -177,13 +183,13 @@ export function PrintSheetView({
                   <dt className="text-[#6b625c]">
                     {doc.document_type === "receipt" && showTotalPaid ? "Amount paid in total" : "Amount paid"}
                   </dt>
-                  <dd className="num">{formatKobo(doc.amount_paid_kobo)}</dd>
+                  <dd className="num">{formatKobo(doc.amount_paid_kobo, currency)}</dd>
                 </div>
               )}
               {doc.balance_remaining_kobo > 0 ? (
                 <div className="flex justify-between font-semibold text-[#b54f1d]">
                   <dt>Balance owed</dt>
-                  <dd className="num">{formatKobo(doc.balance_remaining_kobo)}</dd>
+                  <dd className="num">{formatKobo(doc.balance_remaining_kobo, currency)}</dd>
                 </div>
               ) : doc.document_type !== "quotation" ? (
                 <p className="pt-1 text-right text-[12px] font-semibold uppercase tracking-[0.12em] text-[#1e7c3f]">
@@ -210,6 +216,14 @@ export function PrintSheetView({
                 <p className="mt-1.5 font-semibold text-[#1a1512]">{business.bank_name}</p>
                 <p className="num">{business.bank_account_number}</p>
                 <p>{business.bank_account_name}</p>
+              </div>
+            )}
+            {showInstructions && (
+              <div>
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#6b625c]">
+                  How to pay
+                </p>
+                <p className="mt-1.5 whitespace-pre-line [overflow-wrap:anywhere]">{doc.payment_instructions}</p>
               </div>
             )}
             {doc.terms && (

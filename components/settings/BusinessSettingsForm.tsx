@@ -18,6 +18,8 @@ export type BusinessDefaults = {
   bank_name: string | null;
   bank_account_name: string | null;
   bank_account_number: string | null;
+  default_currency: string | null;
+  payment_instructions: string | null;
 };
 
 export function BusinessSettingsForm({ business }: { business: BusinessDefaults }) {
@@ -68,10 +70,10 @@ export function BusinessSettingsForm({ business }: { business: BusinessDefaults 
       </section>
 
       <section className="rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-medium text-ink">Bank details for invoices</h2>
+        <h2 className="text-[14px] font-medium text-ink">Payment details</h2>
         <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink-3">
-          Shown on unpaid invoices under “Pay by bank transfer”. Leave blank if you don’t want it
-          printed.
+          Bank details below appear on unpaid NGN invoices. For other currencies,
+          add payment instructions for an account or service you already use.
         </p>
         <div className="mt-3 space-y-3.5">
           <Field
@@ -97,6 +99,25 @@ export function BusinessSettingsForm({ business }: { business: BusinessDefaults 
               placeholder="Name on the account"
             />
           </div>
+          <div className="mt-3.5">
+            <label htmlFor="payment_instructions" className="mb-1.5 block text-[13.5px] font-medium text-ink">
+              Payment instructions (optional)
+            </label>
+            <textarea
+              id="payment_instructions"
+              name="payment_instructions"
+              rows={3}
+              maxLength={500}
+              defaultValue={business.payment_instructions ?? ""}
+              placeholder="Bank / wire details, or a payment link from your provider"
+              className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-4"
+            />
+            <p className="mt-1.5 text-[12px] leading-relaxed text-ink-3">
+              Shown on new invoices, quotations and their public links under “How to pay”.
+              Use a provider or account you already have that accepts the billed currency.
+              Check or change these details for each document. Rela doesn’t process this payment.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -115,6 +136,22 @@ export function BusinessSettingsForm({ business }: { business: BusinessDefaults 
             >
               <option value="product">Products — goods &amp; stock</option>
               <option value="service">Services — work &amp; time</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="setting_currency" className="mb-1.5 block text-[13.5px] font-medium text-ink">
+              Default currency
+            </label>
+            <select
+              id="setting_currency"
+              name="default_currency"
+              defaultValue={business.default_currency ?? "NGN"}
+              className="min-h-12 w-full rounded-xl border border-line bg-surface px-3 text-[15px] text-ink"
+            >
+              <option value="NGN">₦ Naira (NGN)</option>
+              <option value="USD">$ US dollar (USD)</option>
+              <option value="GBP">£ Pound (GBP)</option>
+              <option value="EUR">€ Euro (EUR)</option>
             </select>
           </div>
           <div>

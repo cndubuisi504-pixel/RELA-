@@ -1,9 +1,9 @@
-import { formatKobo } from "@/lib/money";
+import { formatKobo, currencySymbol, type Currency } from "@/lib/money";
 
 export type MonthPoint = { label: string; full: string; value: number };
 
 /** Reachable bar heights so a single big month doesn't flatten the rest. */
-export function RevenueChart({ data }: { data: MonthPoint[] }) {
+export function RevenueChart({ data, currency = "NGN" }: { data: MonthPoint[]; currency?: Currency }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   const W = 320;
   const H = 140;
@@ -13,7 +13,7 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
   const barW = (W - gap * (data.length + 1)) / data.length;
 
   const chartLabel = data
-    .map((d) => `${d.full}: ${formatKobo(d.value)}`)
+    .map((d) => `${d.full}: ${formatKobo(d.value, currency)}`)
     .join("; ");
 
   return (
@@ -37,7 +37,7 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
                 className="num fill-[var(--ink-3)]"
                 fontSize="9.5"
               >
-                {d.value > 0 ? compact(d.value) : ""}
+                {d.value > 0 ? compact(d.value, currency) : ""}
               </text>
               <rect
                 x={x}
@@ -67,7 +67,7 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
           {data.map((d) => (
             <tr key={d.label}>
               <th scope="row">{d.full}</th>
-              <td>{formatKobo(d.value)}</td>
+              <td>{formatKobo(d.value, currency)}</td>
             </tr>
           ))}
         </tbody>
@@ -76,10 +76,11 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
   );
 }
 
-/** 45000000 kobo -> "₦450k" ; 1200000 -> "₦12k" ; 12500000 -> "₦125k" */
-export function compact(kobo: number): string {
-  const naira = kobo / 100;
-  if (naira >= 1_000_000) return `₦${(naira / 1_000_000).toFixed(naira % 1_000_000 ? 1 : 0)}m`;
-  if (naira >= 1_000) return `₦${Math.round(naira / 1_000)}k`;
-  return `₦${naira}`;
+/** Compact chart labels in the same currency as the data. */
+export function compact(minor: number, currency: Currency = "NGN"): string {
+  const units = minor / 100;
+  const symbol = currencySymbol(currency);
+  if (units >= 1_000_000) return `${symbol}${(units / 1_000_000).toFixed(units % 1_000_000 ? 1 : 0)}m`;
+  if (units >= 1_000) return `${symbol}${Math.round(units / 1_000)}k`;
+  return `${symbol}${Number(units.toFixed(2))}`;
 }

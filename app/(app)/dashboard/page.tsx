@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CreateButton } from "@/components/documents/CreateButton";
 import { StatusBadge } from "@/components/documents/StatusBadge";
 import { typeMeta, type DocType } from "@/lib/documents/status";
-import { formatKobo } from "@/lib/money";
+import { formatKobo, asCurrency, CURRENCIES, type Currency } from "@/lib/money";
 import { ArrowRightIcon, CheckIcon } from "@/components/ui/icons";
 
 const filters = [
@@ -20,9 +20,11 @@ type Row = {
   customer_name: string;
   total_kobo: number;
   amount_paid_kobo: number;
+  receipt_for_payment_kobo: number | null;
   balance_remaining_kobo: number;
   status: string;
   issued_date: string;
+  currency: string;
 };
 
 export default async function DashboardPage({
@@ -40,7 +42,7 @@ export default async function DashboardPage({
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, name")
+    .select("id, name, default_currency")
     .eq("owner_id", user!.id)
     .maybeSingle();
 
@@ -57,7 +59,7 @@ export default async function DashboardPage({
       .maybeSingle(),
     supabase
       .from("documents")
-      .select("id, document_type, document_number, customer_name, total_kobo, amount_paid_kobo, balance_remaining_kobo, status, issued_date")
+      .select("id, document_type, document_number, customer_name, total_kobo, amount_paid_kobo, balance_remaining_kobo, status, issued_date, currency, receipt_for_payment_kobo")
       .eq("business_id", business!.id)
       .order("created_at", { ascending: false })
       .limit(50),
@@ -72,12 +74,25 @@ export default async function DashboardPage({
   const all = (docs ?? []) as Row[];
   const visible = activeFilter === "all" ? all : all.filter((d) => d.document_type === activeFilter);
 
-  const outstanding = all
-    .filter((d) => d.document_type === "invoice" && d.balance_remaining_kobo > 0)
-    .reduce((sum, d) => sum + d.balance_remaining_kobo, 0);
-  const collected = all
-    .filter((d) => d.document_type === "receipt")
-    .reduce((sum, d) => sum + d.amount_paid_kobo, 0);
+  // Keep each currency separate; payment receipts count only this payment, not the running total.
+  const outstandingBy: Partial<Record<Currency, number>> = {};
+  for (const d of all.filter((d) => d.document_type === "invoice" && d.status !== "void" && d.balance_remaining_kobo > 0)) {
+    const c = asCurrency(d.currency as string | null);
+    outstandingBy[c] = (outstandingBy[c] ?? 0) + d.balance_remaining_kobo;
+  }
+  const collectedBy: Partial<Record<Currency, number>> = {};
+  for (const d of all.filter((d) => d.document_type === "receipt" && d.status !== "void")) {
+    const c = asCurrency(d.currency as string | null);
+    collectedBy[c] = (collectedBy[c] ?? 0) + (d.receipt_for_payment_kobo ?? d.amount_paid_kobo);
+  }
+  const activeCurrencies = CURRENCIES.filter((c) => all.some((d) => asCurrency(d.currency) === c));
+  const zeroCurrencies: Currency[] = activeCurrencies.length
+    ? activeCurrencies
+    : [asCurrency(business?.default_currency)];
+  const fmtStack = (by: Partial<Record<Currency, number>>) => {
+    const nonzero = CURRENCIES.filter((c) => (by[c] ?? 0) > 0);
+    return (nonzero.length ? nonzero : zeroCurrencies).map((c) => formatKobo(by[c] ?? 0, c));
+  };
 
   const monthLabel = new Date().toLocaleDateString("en-NG", { month: "long" });
   const daysLeft = profile?.subscription_ends_at
@@ -162,16 +177,24 @@ export default async function DashboardPage({
       <section aria-label="Summary" className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-surface p-4">
           <p className="text-[12px] uppercase tracking-[0.12em] text-ink-3">Outstanding</p>
-          <p className="num mt-1.5 text-[22px] font-medium leading-none text-ink">
-            {formatKobo(outstanding)}
-          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {fmtStack(outstandingBy).map((line) => (
+              <p key={line} className="num text-[22px] font-medium leading-none text-ink">
+                {line}
+              </p>
+            ))}
+          </div>
           <p className="mt-1.5 text-[11.5px] text-ink-3">Unpaid invoice balances</p>
         </div>
         <div className="rounded-2xl border border-line bg-surface p-4">
           <p className="text-[12px] uppercase tracking-[0.12em] text-ink-3">Collected</p>
-          <p className="num mt-1.5 text-[22px] font-medium leading-none text-ink">
-            {formatKobo(collected)}
-          </p>
+          <div className="mt-1.5 space-y-0.5">
+            {fmtStack(collectedBy).map((line) => (
+              <p key={line} className="num text-[22px] font-medium leading-none text-ink">
+                {line}
+              </p>
+            ))}
+          </div>
           <p className="mt-1.5 text-[11.5px] text-ink-3">Across receipts issued</p>
         </div>
       </section>
@@ -229,7 +252,7 @@ export default async function DashboardPage({
                   <span className="num block text-[11.5px] text-ink-3">{doc.document_number}</span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="num text-[14px] text-ink">{formatKobo(doc.total_kobo)}</span>
+                  <span className="num text-[14px] text-ink">{formatKobo(doc.total_kobo, asCurrency(doc.currency as string | null))}</span>
                   <StatusBadge status={doc.status} />
                 </span>
               </Link>
