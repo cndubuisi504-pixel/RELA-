@@ -2,8 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ThemeToggle } from "@/components/branding/ThemeToggle";
 import { ArrowRightIcon } from "@/components/ui/icons";
+import { BrandingSettingsCard } from "@/components/settings/BrandingSettingsCard";
 import { BusinessSettingsForm } from "@/components/settings/BusinessSettingsForm";
 import { LoginSettingsForm } from "@/components/settings/LoginSettingsForm";
+import { pathFromBrandingUrl } from "@/lib/branding/url";
 
 export const metadata = { title: "Settings" };
 
@@ -17,7 +19,7 @@ export default async function SettingsPage() {
     supabase
       .from("businesses")
       .select(
-        "name, address, phone, email, logo_url, bank_name, bank_account_name, bank_account_number, default_mode, default_theme, default_currency, payment_instructions",
+        "name, address, phone, email, logo_url, signature_url, bank_name, bank_account_name, bank_account_number, default_mode, default_theme, default_currency, payment_instructions",
       )
       .eq("owner_id", user!.id)
       .maybeSingle(),
@@ -45,6 +47,13 @@ export default async function SettingsPage() {
           Your business identity, payments and sign-in — everything here feeds your documents.
         </p>
       </div>
+
+      <BrandingSettingsCard
+        logoUrl={business?.logo_url}
+        logoPath={pathFromBrandingUrl(business?.logo_url)}
+        signatureUrl={business?.signature_url}
+        signaturePath={pathFromBrandingUrl(business?.signature_url)}
+      />
 
       <BusinessSettingsForm
         business={{
@@ -102,7 +111,7 @@ export default async function SettingsPage() {
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-medium text-ink">Need a hand?</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-3">
-          Your logo, a special document layout, or exporting all your data — tell us what you need
+          A special document layout, or exporting all your data — tell us what you need
           and we&apos;ll set it up with you.
         </p>
         <Link href="/support" className="btn btn-ghost btn-sm mt-3">

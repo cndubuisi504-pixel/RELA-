@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { saveUploadedAsset } from "@/lib/setup/actions";
+import { pathFromBrandingUrl } from "@/lib/branding/url";
 import { CloseIcon, PlusIcon } from "@/components/ui/icons";
 
 type Kind = "logo" | "signature";
@@ -24,9 +25,12 @@ export function AssetUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>(initialUrl ? "done" : "empty");
   const [url, setUrl] = useState<string | null>(initialUrl ?? null);
-  const [storedPath, setStoredPath] = useState<string | null>(initialPath ?? null);
+  const [storedPath, setStoredPath] = useState<string | null>(
+    initialPath ?? (initialUrl ? pathFromBrandingUrl(initialUrl) : null),
+  );
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const upload = useCallback(
     async (file: File) => {
@@ -103,11 +107,37 @@ export function AssetUploader({
   }
 
   async function remove() {
+    if (removing) return;
+    setRemoving(true);
+    const toRemove = storedPath;
+    const prevUrl = url;
+    const prevPath = storedPath;
+
     setPhase("empty");
     setUrl(null);
     setError(null);
     setStoredPath(null);
-    await saveUploadedAsset(kind, "");
+
+    try {
+      if (toRemove) {
+        const supabase = createClient();
+        await supabase.storage.from("branding").remove([toRemove]);
+      }
+      const saved = await saveUploadedAsset(kind, "");
+      if (!saved.ok) {
+        setError(saved.error ?? "Couldn’t remove asset. Try again.");
+        setUrl(prevUrl);
+        setStoredPath(prevPath);
+        setPhase("done");
+      }
+    } catch {
+      setError("Couldn’t remove asset. Check connection and retry.");
+      setUrl(prevUrl);
+      setStoredPath(prevPath);
+      setPhase("done");
+    } finally {
+      setRemoving(false);
+    }
   }
 
   const busy = phase === "validating" || phase === "uploading";
@@ -131,9 +161,10 @@ export function AssetUploader({
             <button
               type="button"
               onClick={remove}
-              className="min-h-11 rounded-lg px-2 text-[12.5px] text-ink-3 hover:text-[var(--danger)]"
+              disabled={removing}
+              className="min-h-11 rounded-lg px-2 text-[12.5px] text-ink-3 hover:text-[var(--danger)] disabled:opacity-50"
             >
-              Remove
+              {removing ? "Removing…" : "Remove"}
             </button>
           </div>
         )}

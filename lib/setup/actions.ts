@@ -146,12 +146,16 @@ export async function savePreferences(_prev: SetupState, formData: FormData): Pr
   redirect("/dashboard");
 }
 
-/** Called by the branding step after the file lands in storage. */
+/** Called by the branding step or Settings after the file lands in storage or when removed. */
 export async function saveUploadedAsset(
   kind: "logo" | "signature",
   url: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { supabase, user } = await requireUser();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Your session expired. Please sign in again." };
 
   // Only accept files this user actually owns in our branding bucket. The browser
   // uploads to storage directly, so the URL is the only thing we can trust-check.
@@ -163,10 +167,12 @@ export async function saveUploadedAsset(
   const column = kind === "logo" ? "logo_url" : "signature_url";
   const { error } = await supabase
     .from("businesses")
-    .update({ [column]: url })
+    .update({ [column]: url || null })
     .eq("owner_id", user.id);
 
   if (error) return { ok: false, error: "Uploaded, but we couldn’t attach it to your business." };
   revalidatePath("/setup", "layout");
+  revalidatePath("/settings", "page");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
