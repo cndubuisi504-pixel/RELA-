@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { chromium } from "playwright";
 
 process.loadEnvFile(".env.local");
-const base = "http://localhost:3000";
+const base = process.env.QA_BASE_URL || "https://rela-iota-eight.vercel.app";
 const SUPA = "https://zglkbrivfkabmlhrllbf.supabase.co";
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const QA_UID = "509a7f5e-1354-4282-ba9b-ccf18d907b01";
