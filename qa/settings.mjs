@@ -32,7 +32,7 @@ async function login(p, password = "QaTest12345") {
 }
 
 /* snapshot current state so we can restore after */
-const before = (await rest(`businesses?id=eq.${QA_BIZ}&select=name,address,phone,bank_name,bank_account_name,bank_account_number,default_mode,default_theme`)).body[0];
+const before = (await rest(`businesses?id=eq.${QA_BIZ}&select=name,address,phone,bank_name,bank_account_name,bank_account_number,default_mode,default_theme,default_currency`)).body[0];
 
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const page = await ctx.newPage();
