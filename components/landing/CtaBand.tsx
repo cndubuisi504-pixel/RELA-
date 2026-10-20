@@ -35,7 +35,7 @@ export function CtaBand() {
               </Link>
             </div>
             <p className="mt-4 text-[12.5px] text-[var(--invert-muted)]">
-              No card. No setup fee. Keep your documents forever.
+              Free to start. No setup fee. Keep your documents forever.
             </p>
           </div>
         </div>

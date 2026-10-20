@@ -8,7 +8,7 @@ export default function SignupPage() {
   return (
     <AuthShell
       title="Create your Rela account"
-      subtitle="Five free documents every month. No card, no setup fee."
+      subtitle="Five free documents every month. Free to start, no setup fee."
       footer={
         <span>
           Already have an account?{" "}

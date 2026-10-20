@@ -20,7 +20,7 @@ const plans: Plan[] = [
     name: "Free",
     tag: "Free forever",
     price: "₦0",
-    priceNote: "no card",
+    priceNote: "free forever",
     blurb: "For getting your first documents out the door.",
     features: [
       "5 documents per calendar month",

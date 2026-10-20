@@ -3,7 +3,7 @@ import { CheckIcon, ArrowDownIcon } from "@/components/ui/icons";
 import { DocumentVisual } from "@/components/landing/DocumentVisual";
 import { site } from "@/lib/site";
 
-const assurances = ["No card needed", "5 free documents", "Works on any phone"];
+const assurances = ["Free to start", "5 free documents", "Works on any phone"];
 
 export function Hero() {
   return (
