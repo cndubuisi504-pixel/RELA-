@@ -50,8 +50,12 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     return { error: "We couldn’t create your account. Check your connection and try again.", values };
   }
 
-  // Email confirmation on: no session yet.
+  // If auto-confirm is active but signUp didn't attach session cookies, log in directly.
   if (!data.session) {
+    const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
+    if (loginData?.session) {
+      redirect("/setup/business");
+    }
     return {
       notice: `Almost there. We sent a confirmation link to ${email} — open it to finish setting up.`,
     };
