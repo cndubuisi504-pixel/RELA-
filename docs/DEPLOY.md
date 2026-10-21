@@ -53,7 +53,7 @@ npm run deploy                    # links the project + deploys to production
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase project — **server only**, sensitive |
 | `ADMIN_EMAIL` | `chimdindundubuisirich@gmail.com` |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | `therelasolutions@gmail.com` |
-| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349153230482` |
+| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349169483998` |
 | `PAYSTACK_SECRET_KEY` | Paystack dashboard — **server only**, sensitive (test key now, swap to live) |
 | `PAYSTACK_PUBLIC_KEY` | Paystack dashboard — sensitive, also server-side; hosted checkout needs no client key |
 | `NEXT_PUBLIC_APP_URL` | `https://rela-iota-eight.vercel.app` — the project's actual production URL (already set) |

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
 import { ArrowRightIcon, CheckIcon, ShieldCheckIcon } from "@/components/ui/icons";
-import { site } from "@/lib/site";
+import { site, whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "API Docs",
@@ -64,7 +64,7 @@ export default function ApiDocsPage() {
                 <ArrowRightIcon size={17} />
               </a>
               <a
-                href={`https://wa.me/2349153230482`}
+                href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost btn-lg"
