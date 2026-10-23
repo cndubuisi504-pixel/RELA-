@@ -21,42 +21,120 @@ interface ReceiptChargeInput {
 }
 
 interface CreateReceiptRequestBody {
+  reference?: string | null;
+  customer?: {
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+  };
   business?: {
     name?: string;
     address?: string | null;
     phone?: string | null;
     email?: string | null;
   };
-  customer?: {
-    name?: string;
-    email?: string | null;
-    phone?: string | null;
-  };
-  order_number?: string | null;
   items?: ReceiptItemInput[];
+  delivery_fee?: number;
   charges?: ReceiptChargeInput[];
   discount?: number;
   tax?: number;
-  currency?: string;
-  total_amount?: number;
   total?: number;
+  total_amount?: number;
+  currency?: string;
+  payment?: {
+    method?: string | null;
+    channel?: string | null;
+    paid_at?: string | null;
+  };
   payment_method?: string | null;
   payment_reference?: string | null;
   payment_status?: string | null;
   purchase_date?: string | null;
+  order_number?: string | null;
 }
 
+/**
+ * GET /v1/receipts?reference=...
+ * Query receipts by reference or list recent receipts
+ */
+export async function GET(req: NextRequest) {
+  const auth = await validateApiKey(req);
+  if (!auth.authenticated) {
+    return NextResponse.json(
+      { error: { code: auth.error, message: auth.message } },
+      { status: auth.status }
+    );
+  }
+
+  const reference = req.nextUrl.searchParams.get("reference");
+  if (!reference) {
+    return NextResponse.json(
+      { error: { code: "missing_query", message: "Query parameter 'reference' is required." } },
+      { status: 400 }
+    );
+  }
+
+  const supabase = getServiceSupabase();
+  let query = supabase.from("api_receipts").select("*").eq("payment_reference", reference.trim());
+
+  if (auth.keyId !== "master_env_key" && auth.businessId) {
+    query = query.eq("business_id", auth.businessId);
+  }
+
+  const { data: receipt, error } = await query.maybeSingle();
+
+  if (error || !receipt) {
+    return NextResponse.json(
+      { error: { code: "not_found", message: `Receipt with reference '${reference}' not found.` } },
+      { status: 404 }
+    );
+  }
+
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
+
+  const pdfUrl = `${origin}/v1/receipts/${receipt.id}/pdf?token=${receipt.download_token}`;
+
+  return NextResponse.json({
+    id: receipt.id,
+    receipt_number: receipt.receipt_number,
+    reference: receipt.payment_reference,
+    status: receipt.receipt_status || "ready",
+    customer: {
+      name: receipt.customer_name,
+      email: receipt.customer_email,
+      phone: receipt.customer_phone,
+    },
+    items: receipt.items,
+    charges: receipt.charges,
+    discount: receipt.discount,
+    tax: receipt.tax,
+    total: receipt.total_amount,
+    currency: receipt.currency,
+    payment: {
+      method: receipt.payment_method,
+      reference: receipt.payment_reference,
+      status: receipt.payment_status,
+      paid_at: receipt.purchase_date,
+    },
+    verification_url: receipt.verification_url,
+    pdf_url: pdfUrl,
+    is_test: receipt.is_test,
+    created_at: receipt.created_at,
+  });
+}
+
+/**
+ * POST /v1/receipts
+ * Create a receipt with reference idempotency, test mode detection, and PDF generation
+ */
 export async function POST(req: NextRequest) {
   // 1. Authenticate request via API Key
   const auth = await validateApiKey(req);
   if (!auth.authenticated) {
     return NextResponse.json(
-      {
-        success: false,
-        error: auth.error,
-        message: auth.message,
-        ...(auth.retryAfter ? { retry_after: auth.retryAfter } : {}),
-      },
+      { error: { code: auth.error, message: auth.message } },
       { status: auth.status }
     );
   }
@@ -67,212 +145,151 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: "invalid_json",
-        message: "Request body must be valid JSON.",
-      },
+      { error: { code: "invalid_json", message: "Request body must be valid JSON." } },
       { status: 400 }
     );
   }
 
-  // 3. Validate missing fields
-  const missingFields: string[] = [];
+  // 3. Extract reference and enforce idempotency
+  const reference = (body.reference || body.payment_reference || body.order_number)?.trim();
+  const supabase = getServiceSupabase();
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 
-  if (!body.business || typeof body.business !== "object") {
-    missingFields.push("business");
-  } else if (!body.business.name || typeof body.business.name !== "string" || !body.business.name.trim()) {
-    missingFields.push("business.name");
+  if (reference) {
+    // Check if receipt already exists with this reference
+    const { data: existing } = await supabase
+      .from("api_receipts")
+      .select("*")
+      .eq("payment_reference", reference)
+      .maybeSingle();
+
+    if (existing) {
+      // Idempotency: return existing receipt immediately
+      const existingPdfUrl = `${origin}/v1/receipts/${existing.id}/pdf?token=${existing.download_token}`;
+      return NextResponse.json(
+        {
+          id: existing.id,
+          receipt_number: existing.receipt_number,
+          status: existing.receipt_status || "ready",
+          verification_url: existing.verification_url,
+          pdf_url: existingPdfUrl,
+          created_at: existing.created_at,
+        },
+        { status: 200 }
+      );
+    }
   }
 
-  if (!body.customer || typeof body.customer !== "object") {
-    missingFields.push("customer");
-  } else if (!body.customer.name || typeof body.customer.name !== "string" || !body.customer.name.trim()) {
-    missingFields.push("customer.name");
-  }
-
-  if (!Array.isArray(body.items) || body.items.length === 0) {
-    missingFields.push("items");
-  }
-
-  if (missingFields.length > 0) {
+  // 4. Validate required customer and items fields
+  if (!body.customer || typeof body.customer !== "object" || !body.customer.name?.trim()) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "missing_fields",
-        message: `Missing required field(s): ${missingFields.join(", ")}`,
-        fields: missingFields,
-      },
+      { error: { code: "missing_fields", message: "Missing required field: customer.name" } },
       { status: 422 }
     );
   }
 
-  // 4. Validate items and amounts
-  const items = body.items!;
-  let itemsSubtotal = 0;
+  if (!Array.isArray(body.items) || body.items.length === 0) {
+    return NextResponse.json(
+      { error: { code: "missing_fields", message: "items must be a non-empty array." } },
+      { status: 422 }
+    );
+  }
 
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (!item.name || typeof item.name !== "string" || !item.name.trim()) {
+  // 5. Validate items, delivery, discount, and total
+  let itemsSum = 0;
+  for (let i = 0; i < body.items.length; i++) {
+    const item = body.items[i];
+    if (!item.name?.trim()) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "missing_fields",
-          message: `Item at index ${i} is missing a valid name.`,
-          fields: [`items[${i}].name`],
-        },
+        { error: { code: "missing_fields", message: `items[${i}].name is required.` } },
         { status: 422 }
       );
     }
-
     const qty = Number(item.quantity);
     const unitPrice = Number(item.unit_price);
-
-    if (isNaN(qty) || qty <= 0) {
+    if (isNaN(qty) || qty <= 0 || isNaN(unitPrice) || unitPrice < 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "invalid_amounts",
-          message: `Item at index ${i} ("${item.name}") has invalid quantity: ${item.quantity}. Must be > 0.`,
-          fields: [`items[${i}].quantity`],
-        },
+        { error: { code: "invalid_amounts", message: `Invalid quantity or unit_price for item '${item.name}'.` } },
         { status: 422 }
       );
     }
-
-    if (isNaN(unitPrice) || unitPrice < 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "invalid_amounts",
-          message: `Item at index ${i} ("${item.name}") has invalid unit_price: ${item.unit_price}. Must be >= 0.`,
-          fields: [`items[${i}].unit_price`],
-        },
-        { status: 422 }
-      );
-    }
-
-    itemsSubtotal += qty * unitPrice;
+    itemsSum += qty * unitPrice;
   }
 
-  // Validate charges
-  let chargesTotal = 0;
-  const sanitizedCharges: ReceiptChargeInput[] = [];
-  if (Array.isArray(body.charges)) {
-    for (let c = 0; c < body.charges.length; c++) {
-      const charge = body.charges[c];
-      const amount = Number(charge.amount);
-      if (isNaN(amount) || amount < 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "invalid_amounts",
-            message: `Charge at index ${c} has invalid amount: ${charge.amount}. Must be >= 0.`,
-            fields: [`charges[${c}].amount`],
-          },
-          { status: 422 }
-        );
-      }
-      chargesTotal += amount;
-      sanitizedCharges.push({
-        name: charge.name || "Delivery Charge",
-        amount,
-      });
+  let deliveryAmount = 0;
+  if (body.delivery_fee !== undefined) {
+    deliveryAmount = Number(body.delivery_fee);
+  } else if (Array.isArray(body.charges)) {
+    for (const c of body.charges) {
+      deliveryAmount += Number(c.amount || 0);
     }
   }
 
-  // Validate discount and tax
+  if (isNaN(deliveryAmount) || deliveryAmount < 0) {
+    return NextResponse.json(
+      { error: { code: "invalid_amounts", message: "delivery_fee must be non-negative." } },
+      { status: 422 }
+    );
+  }
+
   const discount = Number(body.discount || 0);
   if (isNaN(discount) || discount < 0) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "invalid_amounts",
-        message: "Discount must be a non-negative number.",
-        fields: ["discount"],
-      },
+      { error: { code: "invalid_amounts", message: "discount must be non-negative." } },
       { status: 422 }
     );
   }
 
   const tax = Number(body.tax || 0);
-  if (isNaN(tax) || tax < 0) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "invalid_amounts",
-        message: "Tax must be a non-negative number.",
-        fields: ["tax"],
-      },
-      { status: 422 }
-    );
-  }
+  const calculatedTotal = Math.round((itemsSum + deliveryAmount - discount + tax) * 100) / 100;
 
-  const computedTotal = Math.round((itemsSubtotal + chargesTotal - discount + tax) * 100) / 100;
-  if (computedTotal < 0) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "invalid_amounts",
-        message: "Calculated receipt total cannot be negative.",
-      },
-      { status: 422 }
-    );
-  }
+  const declaredTotal = body.total !== undefined ? Number(body.total) : (body.total_amount !== undefined ? Number(body.total_amount) : undefined);
 
-  // Check client supplied total_amount or total
-  const declaredTotal = body.total_amount !== undefined ? Number(body.total_amount) : (body.total !== undefined ? Number(body.total) : undefined);
-  if (declaredTotal !== undefined && !isNaN(declaredTotal)) {
-    if (Math.abs(declaredTotal - computedTotal) > 0.05) {
+  if (declaredTotal !== undefined) {
+    if (Math.abs(declaredTotal - calculatedTotal) > 0.05) {
       return NextResponse.json(
         {
-          success: false,
-          error: "invalid_amounts",
-          message: `Total amount mismatch: expected ${computedTotal}, but received ${declaredTotal}.`,
-          expected_total: computedTotal,
-          received_total: declaredTotal,
+          error: {
+            code: "invalid_total",
+            message: "total must equal items + delivery - discount",
+          },
         },
         { status: 422 }
       );
     }
   }
 
-  // 5. Generate secure identifiers
+  const finalTotal = declaredTotal !== undefined ? declaredTotal : calculatedTotal;
+  const isKobo = finalTotal >= 100000 && Number.isInteger(finalTotal);
+
+  // 6. Generate secure identifiers
   const receiptId = `rec_${crypto.randomBytes(12).toString("hex")}`;
   const downloadToken = crypto.randomBytes(20).toString("hex");
   const publicToken = crypto.randomBytes(16).toString("hex");
 
-  // Determine current date & sequential receipt number: REC-YYYYMMDD-0001
+  // Determine current date & sequential receipt number: REL-YYYYMMDD-0001
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ""); // YYYYMMDD
-  const purchaseDate = body.purchase_date ? new Date(body.purchase_date).toISOString() : now.toISOString();
+  const purchaseDate = body.payment?.paid_at || body.purchase_date || now.toISOString();
 
-  const supabase = getServiceSupabase();
-
-  // Find daily sequence count for today
-  const dayPrefix = `REC-${dateStr}-%`;
+  const dayPrefix = `REL-${dateStr}-%`;
   const { count } = await supabase
     .from("api_receipts")
     .select("id", { count: "exact", head: true })
     .like("receipt_number", dayPrefix);
 
   const seq = (count || 0) + 1;
-  const receiptNumber = `REC-${dateStr}-${String(seq).padStart(4, "0")}`;
-
-  // URLs
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
+  const receiptNumber = `REL-${dateStr}-${String(seq).padStart(4, "0")}`;
 
   const verificationUrl = `${origin}/r/${publicToken}`;
-  // We attach ?token=<downloadToken> so the storefront can place it directly behind a button without exposing master keys
-  const pdfDownloadUrl = `${origin}/v1/receipts/${receiptId}/download?token=${downloadToken}`;
-
+  const pdfUrl = `${origin}/v1/receipts/${receiptId}/pdf?token=${downloadToken}`;
   const currency = (body.currency || "NGN").toUpperCase();
-  const paymentStatus = (body.payment_status || "paid").toLowerCase();
 
-  // 6. Generate the PDF
-  const sanitizedItems = items.map((it) => ({
+  const businessName = body.business?.name?.trim() || auth.name || "Merchant Store";
+
+  const sanitizedItems = body.items.map((it) => ({
     name: it.name.trim(),
     description: it.description?.trim() || null,
     size: it.size?.trim() || null,
@@ -282,103 +299,102 @@ export async function POST(req: NextRequest) {
     total: Number(it.quantity) * Number(it.unit_price),
   }));
 
+  const sanitizedCharges = Array.isArray(body.charges) && body.charges.length > 0
+    ? body.charges
+    : (deliveryAmount > 0 ? [{ name: "Delivery Fee", amount: deliveryAmount }] : []);
+
+  // 7. Generate PDF synchronously
   let pdfBytes: Uint8Array;
   try {
     pdfBytes = await generateReceiptPdf({
       receiptId,
       receiptNumber,
-      orderNumber: body.order_number?.trim() || null,
+      orderNumber: reference || null,
       business: {
-        name: body.business!.name!.trim(),
-        address: body.business!.address?.trim() || null,
-        phone: body.business!.phone?.trim() || null,
-        email: body.business!.email?.trim() || null,
+        name: businessName,
+        address: body.business?.address?.trim() || null,
+        phone: body.business?.phone?.trim() || null,
+        email: body.business?.email?.trim() || null,
       },
       customer: {
-        name: body.customer!.name!.trim(),
-        email: body.customer!.email?.trim() || null,
-        phone: body.customer!.phone?.trim() || null,
+        name: body.customer.name.trim(),
+        email: body.customer.email?.trim() || null,
+        phone: body.customer.phone?.trim() || null,
       },
       items: sanitizedItems,
       charges: sanitizedCharges,
+      deliveryFee: deliveryAmount,
       discount,
       tax,
       currency,
-      total: computedTotal,
-      paymentMethod: body.payment_method?.trim() || null,
-      paymentReference: body.payment_reference?.trim() || null,
-      paymentStatus,
+      total: finalTotal,
+      paymentMethod: body.payment?.method || body.payment_method || "card",
+      paymentChannel: body.payment?.channel || null,
+      paymentReference: reference || null,
+      paymentStatus: body.payment_status || "paid",
       purchaseDate,
       verificationUrl,
+      isTest: auth.isTest,
+      isKobo,
     });
   } catch (pdfErr) {
-    console.error("PDF Generation error:", pdfErr);
+    console.error("PDF generation failure:", pdfErr);
     return NextResponse.json(
-      {
-        success: false,
-        error: "pdf_generation_failed",
-        message: "Failed to generate receipt PDF.",
-      },
+      { error: { code: "pdf_generation_failed", message: "Failed to generate receipt PDF." } },
       { status: 500 }
     );
   }
 
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
 
-  // 7. Store in api_receipts table
+  // 8. Persist to api_receipts
   const { error: insertError } = await supabase.from("api_receipts").insert({
     id: receiptId,
     api_key_id: auth.keyId === "master_env_key" ? null : auth.keyId,
     receipt_number: receiptNumber,
-    order_number: body.order_number?.trim() || null,
-    business_name: body.business!.name!.trim(),
-    business_address: body.business!.address?.trim() || null,
-    business_phone: body.business!.phone?.trim() || null,
-    business_email: body.business!.email?.trim() || null,
-    customer_name: body.customer!.name!.trim(),
-    customer_email: body.customer!.email?.trim() || null,
-    customer_phone: body.customer!.phone?.trim() || null,
+    order_number: reference || null,
+    business_name: businessName,
+    business_address: body.business?.address?.trim() || null,
+    business_phone: body.business?.phone?.trim() || null,
+    business_email: body.business?.email?.trim() || null,
+    customer_name: body.customer.name.trim(),
+    customer_email: body.customer.email?.trim() || null,
+    customer_phone: body.customer.phone?.trim() || null,
     items: sanitizedItems,
     charges: sanitizedCharges,
     discount,
     tax,
-    total_amount: computedTotal,
+    total_amount: finalTotal,
     currency,
-    payment_method: body.payment_method?.trim() || null,
-    payment_reference: body.payment_reference?.trim() || null,
-    payment_status: paymentStatus,
+    payment_method: body.payment?.method || body.payment_method || "card",
+    payment_reference: reference || null,
+    payment_status: body.payment_status || "paid",
     purchase_date: purchaseDate,
     verification_url: verificationUrl,
     public_token: publicToken,
     download_token: downloadToken,
     pdf_base64: pdfBase64,
+    is_test: auth.isTest,
+    receipt_status: "ready",
   });
 
   if (insertError) {
-    console.error("Database insert error:", insertError);
+    console.error("Database persistence error:", insertError);
     return NextResponse.json(
-      {
-        success: false,
-        error: "database_error",
-        message: `Failed to save receipt record: ${insertError.message}`,
-      },
+      { error: { code: "database_error", message: "Failed to save receipt record." } },
       { status: 500 }
     );
   }
 
-  // 8. Return success response matching specification exactly
+  // 9. Return exact response format specified
   return NextResponse.json(
     {
-      success: true,
-      receipt: {
-        id: receiptId,
-        number: receiptNumber,
-        status: paymentStatus,
-        total: computedTotal,
-        currency,
-        verification_url: verificationUrl,
-        pdf_download_url: pdfDownloadUrl,
-      },
+      id: receiptId,
+      receipt_number: receiptNumber,
+      status: "ready",
+      verification_url: verificationUrl,
+      pdf_url: pdfUrl,
+      created_at: now.toISOString(),
     },
     { status: 201 }
   );

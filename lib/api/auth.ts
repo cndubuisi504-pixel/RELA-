@@ -39,10 +39,11 @@ export type ApiKeyValidationResult =
       keyId: string;
       name: string;
       businessId?: string | null;
+      isTest: boolean;
     }
   | {
       authenticated: false;
-      error: "unauthorized" | "rate_limit_exceeded";
+      error: "invalid_key" | "rate_limit_exceeded";
       status: number;
       message: string;
       retryAfter?: number;
@@ -62,7 +63,7 @@ export function hashApiKey(rawKey: string): string {
 
 export function generateRawApiKey(environment: "live" | "test" = "live"): string {
   const randomBytes = crypto.randomBytes(24).toString("hex");
-  return `rela_${environment}_${randomBytes}`;
+  return `sk_${environment}_${randomBytes}`;
 }
 
 export async function validateApiKey(request: Request): Promise<ApiKeyValidationResult> {
@@ -80,11 +81,13 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
   if (!rawKey) {
     return {
       authenticated: false,
-      error: "unauthorized",
+      error: "invalid_key",
       status: 401,
-      message: "Missing API key. Provide Authorization: Bearer <API_KEY> header.",
+      message: "Missing API key. Provide Authorization: Bearer <key> header.",
     };
   }
+
+  const isTestFromPrefix = rawKey.startsWith("sk_test_") || rawKey.startsWith("rela_test_");
 
   // 1. Check environment variable master key fallback (e.g. RELA_API_KEY)
   const masterKey = process.env.RELA_API_KEY;
@@ -104,6 +107,7 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
       keyId: "master_env_key",
       name: "Master Storefront Key",
       businessId: null,
+      isTest: isTestFromPrefix,
     };
   }
 
@@ -113,14 +117,14 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
 
   const { data: keyRecord, error } = await supabase
     .from("api_keys")
-    .select("id, name, business_id, status, rate_limit_per_minute")
+    .select("id, name, business_id, status, rate_limit_per_minute, is_test")
     .eq("key_hash", keyHash)
     .single();
 
   if (error || !keyRecord) {
     return {
       authenticated: false,
-      error: "unauthorized",
+      error: "invalid_key",
       status: 401,
       message: "Invalid API key provided. Ensure your secret key is active and formatted correctly.",
     };
@@ -129,7 +133,7 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
   if (keyRecord.status !== "active") {
     return {
       authenticated: false,
-      error: "unauthorized",
+      error: "invalid_key",
       status: 401,
       message: "API key has been revoked or deactivated.",
     };
@@ -160,6 +164,7 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
     keyId: keyRecord.id,
     name: keyRecord.name,
     businessId: keyRecord.business_id,
+    isTest: Boolean(keyRecord.is_test || isTestFromPrefix),
   };
 }
 
@@ -171,11 +176,13 @@ export async function createNewApiKey(params: {
   businessId?: string | null;
   environment?: "live" | "test";
   rateLimitPerMinute?: number;
-}): Promise<{ apiKey: string; id: string; name: string; prefix: string }> {
-  const rawKey = generateRawApiKey(params.environment ?? "live");
+}): Promise<{ apiKey: string; id: string; name: string; prefix: string; isTest: boolean }> {
+  const env = params.environment ?? "live";
+  const rawKey = generateRawApiKey(env);
   const keyHash = hashApiKey(rawKey);
-  const prefix = rawKey.slice(0, 14) + "...";
+  const prefix = rawKey.slice(0, 12) + "...";
   const supabase = getServiceSupabase();
+  const isTest = env === "test";
 
   const { data, error } = await supabase
     .from("api_keys")
@@ -186,8 +193,9 @@ export async function createNewApiKey(params: {
       business_id: params.businessId ?? null,
       status: "active",
       rate_limit_per_minute: params.rateLimitPerMinute ?? 120,
+      is_test: isTest,
     })
-    .select("id, name")
+    .select("id, name, is_test")
     .single();
 
   if (error || !data) {
@@ -199,5 +207,6 @@ export async function createNewApiKey(params: {
     id: data.id,
     name: data.name,
     prefix,
+    isTest: data.is_test,
   };
 }

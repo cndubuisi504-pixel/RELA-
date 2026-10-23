@@ -34,11 +34,11 @@ type PublicDoc = {
   valid_until: string | null;
 };
 
-async function loadDocument(token: string): Promise<{ doc: PublicDoc; downloadUrl?: string } | null> {
+async function loadDocument(token: string): Promise<{ doc: PublicDoc; downloadUrl?: string; isTest?: boolean; isVoid?: boolean } | null> {
   if (!/^[a-f0-9]{16,64}$/i.test(token)) return null;
   const supabase = await createClient();
   const { data } = await supabase.rpc("public_document", { p_token: token });
-  if (data) return { doc: data as PublicDoc };
+  if (data) return { doc: data as PublicDoc, isTest: false, isVoid: data.status === "void" };
 
   // Check api_receipts table for storefront receipts
   try {
@@ -80,11 +80,13 @@ async function loadDocument(token: string): Promise<{ doc: PublicDoc; downloadUr
     const taxKobo = Math.round(Number(rec.tax || 0) * 100);
     const totalKobo = Math.round(Number(rec.total_amount || 0) * 100);
 
+    const isVoid = rec.receipt_status === "void" || rec.payment_status === "void";
+
     const mappedDoc: PublicDoc = {
       type: "receipt",
       number: rec.receipt_number,
       issued_date: (rec.purchase_date || rec.created_at).slice(0, 10),
-      status: rec.payment_status || "paid",
+      status: isVoid ? "void" : (rec.payment_status || "paid"),
       business: {
         name: rec.business_name,
         logo_url: null,
@@ -100,15 +102,15 @@ async function loadDocument(token: string): Promise<{ doc: PublicDoc; downloadUr
       tax_kobo: taxKobo,
       delivery_kobo: deliveryKobo,
       total_kobo: totalKobo,
-      amount_paid_kobo: totalKobo,
+      amount_paid_kobo: isVoid ? 0 : totalKobo,
       balance_remaining_kobo: 0,
       payment_instructions: rec.payment_reference ? `Payment Reference: ${rec.payment_reference}` : null,
       due_date: null,
       valid_until: null,
     };
 
-    const downloadUrl = `/v1/receipts/${rec.id}/download?token=${rec.download_token}`;
-    return { doc: mappedDoc, downloadUrl };
+    const downloadUrl = `/v1/receipts/${rec.id}/pdf?token=${rec.download_token}`;
+    return { doc: mappedDoc, downloadUrl, isTest: Boolean(rec.is_test), isVoid };
   } catch {
     return null;
   }
@@ -143,7 +145,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
     );
   }
 
-  const { doc, downloadUrl } = result;
+  const { doc, downloadUrl, isTest, isVoid } = result;
   const meta = typeMeta[doc.type];
   const currency = asCurrency(doc.currency);
 
@@ -151,14 +153,36 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
     <main id="main" className="min-h-dvh bg-canvas pb-10">
       <header className="container-x flex h-16 items-center justify-between">
         <Logo href="/" markSize={22} textClassName="text-[20px]" />
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--success-border)] bg-[var(--success-bg)] px-3 py-1.5 text-[11.5px] font-medium text-[var(--success)]">
-          <ShieldCheckIcon size={13} />
-          Verified with Rela
-        </span>
+        {isVoid ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-red-50 px-3 py-1.5 text-[11.5px] font-semibold text-red-700">
+            <ShieldCheckIcon size={13} />
+            Voided / Refunded
+          </span>
+        ) : isTest ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11.5px] font-semibold text-amber-800">
+            <ShieldCheckIcon size={13} />
+            Simulated Test Receipt
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--success-border)] bg-[var(--success-bg)] px-3 py-1.5 text-[11.5px] font-medium text-[var(--success)]">
+            <ShieldCheckIcon size={13} />
+            Verified with Rela
+          </span>
+        )}
       </header>
 
       <div className="container-x">
         <article className="mx-auto max-w-[520px] overflow-hidden rounded-[1.5rem] border border-line bg-surface shadow-[var(--shadow-1)]">
+          {isTest && (
+            <div className="border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-[12px] font-medium text-amber-900">
+              ⚠️ TEST MODE: Simulated transaction · Not valid legal proof of payment.
+            </div>
+          )}
+          {isVoid && (
+            <div className="border-b border-red-200 bg-red-50 px-5 py-2.5 text-[12px] font-medium text-red-900">
+              ⛔ VOIDED / REFUNDED: This transaction was canceled or refunded.
+            </div>
+          )}
           <header className="flex items-start justify-between gap-3 border-b border-line p-5">
             <div className="flex items-center gap-3">
               {doc.business.logo_url ? (
