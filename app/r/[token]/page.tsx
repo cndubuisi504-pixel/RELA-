@@ -34,19 +34,91 @@ type PublicDoc = {
   valid_until: string | null;
 };
 
-async function loadDocument(token: string): Promise<PublicDoc | null> {
+async function loadDocument(token: string): Promise<{ doc: PublicDoc; downloadUrl?: string } | null> {
   if (!/^[a-f0-9]{16,64}$/i.test(token)) return null;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("public_document", { p_token: token });
-  if (error || !data) notFound();
-  return data as PublicDoc;
+  const { data } = await supabase.rpc("public_document", { p_token: token });
+  if (data) return { doc: data as PublicDoc };
+
+  // Check api_receipts table for storefront receipts
+  try {
+    const { getServiceSupabase } = await import("@/lib/api/auth");
+    const adminDb = getServiceSupabase();
+    const { data: rec } = await adminDb
+      .from("api_receipts")
+      .select("*")
+      .eq("public_token", token)
+      .single();
+
+    if (!rec) return null;
+
+    let subtotalKobo = 0;
+    const items = (rec.items || []).map((it: any) => {
+      const lineTotal = Math.round((Number(it.quantity || 1) * Number(it.unit_price || 0)) * 100);
+      subtotalKobo += lineTotal;
+      const descParts = [];
+      if (it.description) descParts.push(it.description);
+      if (it.size) descParts.push(`Size: ${it.size}`);
+      if (it.colour) descParts.push(`Colour: ${it.colour}`);
+      return {
+        name: it.name,
+        description: descParts.length > 0 ? descParts.join(" · ") : null,
+        quantity: Number(it.quantity || 1),
+        unit_price_kobo: Math.round(Number(it.unit_price || 0) * 100),
+        total_kobo: lineTotal,
+      };
+    });
+
+    let deliveryKobo = 0;
+    if (Array.isArray(rec.charges)) {
+      for (const c of rec.charges) {
+        deliveryKobo += Math.round(Number(c.amount || 0) * 100);
+      }
+    }
+
+    const discountKobo = Math.round(Number(rec.discount || 0) * 100);
+    const taxKobo = Math.round(Number(rec.tax || 0) * 100);
+    const totalKobo = Math.round(Number(rec.total_amount || 0) * 100);
+
+    const mappedDoc: PublicDoc = {
+      type: "receipt",
+      number: rec.receipt_number,
+      issued_date: (rec.purchase_date || rec.created_at).slice(0, 10),
+      status: rec.payment_status || "paid",
+      business: {
+        name: rec.business_name,
+        logo_url: null,
+        phone: rec.business_phone,
+        email: rec.business_email,
+        address: rec.business_address || "Nigeria",
+      },
+      customer_name: rec.customer_name,
+      currency: rec.currency || "NGN",
+      items,
+      subtotal_kobo: subtotalKobo,
+      discount_kobo: discountKobo,
+      tax_kobo: taxKobo,
+      delivery_kobo: deliveryKobo,
+      total_kobo: totalKobo,
+      amount_paid_kobo: totalKobo,
+      balance_remaining_kobo: 0,
+      payment_instructions: rec.payment_reference ? `Payment Reference: ${rec.payment_reference}` : null,
+      due_date: null,
+      valid_until: null,
+    };
+
+    const downloadUrl = `/v1/receipts/${rec.id}/download?token=${rec.download_token}`;
+    return { doc: mappedDoc, downloadUrl };
+  } catch {
+    return null;
+  }
 }
 
 export default async function VerifyPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const doc = await loadDocument(token);
+  const result = await loadDocument(token);
 
-  if (!doc) {
+  if (!result) {
     return (
       <main id="main" className="flex min-h-dvh flex-col bg-canvas">
         <header className="container-x flex h-16 items-center">
@@ -71,6 +143,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
     );
   }
 
+  const { doc, downloadUrl } = result;
   const meta = typeMeta[doc.type];
   const currency = asCurrency(doc.currency);
 
@@ -196,6 +269,18 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
               <div className="mt-3 rounded-xl border border-line bg-surface-2 p-3 text-[12px] leading-relaxed text-ink-2">
                 <p className="font-medium text-ink">How to pay</p>
                 <p className="mt-0.5 whitespace-pre-line [overflow-wrap:anywhere]">{doc.payment_instructions}</p>
+              </div>
+            )}
+
+            {downloadUrl && (
+              <div className="mt-4">
+                <a
+                  href={downloadUrl}
+                  className="btn btn-primary btn-block text-[13px] justify-center"
+                  download
+                >
+                  Download official PDF receipt
+                </a>
               </div>
             )}
 
