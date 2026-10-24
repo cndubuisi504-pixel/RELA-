@@ -176,3 +176,45 @@ export async function saveUploadedAsset(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/**
+ * Lets new users skip the setup wizard and explore the dashboard immediately.
+ * Ensures a valid baseline business record exists so the dashboard renders cleanly.
+ */
+export async function skipSetupToExplore(): Promise<void> {
+  const { supabase, user } = await requireUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const defaultName = profile?.full_name?.trim() || user.email?.split("@")[0] || "My Business";
+
+  const { data: existing } = await supabase
+    .from("businesses")
+    .select("id, name, setup_completed_at")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (!existing) {
+    await supabase.from("businesses").insert({
+      owner_id: user.id,
+      name: defaultName,
+      address: "Nigeria",
+      phone: "+2348000000000",
+      email: user.email || null,
+      setup_completed_at: new Date().toISOString(),
+    });
+  } else if (!existing.setup_completed_at) {
+    await supabase
+      .from("businesses")
+      .update({ setup_completed_at: new Date().toISOString() })
+      .eq("owner_id", user.id);
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+

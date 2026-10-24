@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveBusiness, type SetupState } from "@/lib/setup/actions";
+import { saveBusiness, skipSetupToExplore, type SetupState } from "@/lib/setup/actions";
 import { Field, TextArea } from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Alert } from "@/components/ui/Alert";
@@ -70,8 +70,15 @@ export function BusinessForm({ defaults }: { defaults?: Defaults }) {
         hint="Optional. Appears under your business name on invoices."
       />
 
-      <div className="pt-2">
+      <div className="pt-2 flex flex-col items-center gap-2.5">
         <SubmitButton pendingLabel="Saving…">Continue to branding</SubmitButton>
+        <button
+          type="submit"
+          formAction={skipSetupToExplore}
+          className="btn btn-ghost btn-block text-[13.5px] text-ink-3 hover:text-ink font-normal"
+        >
+          Skip &amp; explore dashboard →
+        </button>
       </div>
     </form>
   );

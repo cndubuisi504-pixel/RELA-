@@ -42,7 +42,7 @@ export default async function DashboardPage({
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, name, default_currency")
+    .select("id, name, default_currency, phone, address, bank_account_number")
     .eq("owner_id", user!.id)
     .maybeSingle();
 
@@ -102,8 +102,35 @@ export default async function DashboardPage({
       )
     : null;
 
+  const isExploring =
+    !business?.bank_account_number ||
+    business?.phone === "+2348000000000" ||
+    business?.address === "Nigeria";
+
   return (
     <div className="space-y-5">
+      {/* Exploration mode banner */}
+      {isExploring && (
+        <section className="rounded-2xl border border-[var(--primary-soft)] bg-[var(--primary-soft)]/25 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[14px] font-medium text-ink flex items-center gap-1.5">
+                <span>💡</span> You&apos;re exploring Rela
+              </p>
+              <p className="mt-0.5 text-[12.5px] text-ink-2">
+                Add your business contact &amp; bank details whenever you&apos;re ready to share documents with customers.
+              </p>
+            </div>
+            <Link
+              href="/settings"
+              className="btn btn-primary btn-sm shrink-0"
+            >
+              Complete profile
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* Plan / usage banner */}
       {isStarter ? (
         <section className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-bg)] p-4">

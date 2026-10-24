@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { savePreferences, type SetupState } from "@/lib/setup/actions";
+import { savePreferences, skipSetupToExplore, type SetupState } from "@/lib/setup/actions";
 import { Field } from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Alert } from "@/components/ui/Alert";
@@ -131,7 +131,16 @@ export function PreferencesForm({
         </div>
       </fieldset>
 
-      <SubmitButton pendingLabel="Finishing setup…">Finish setup</SubmitButton>
+      <div className="flex flex-col items-center gap-2.5">
+        <SubmitButton pendingLabel="Finishing setup…">Finish setup</SubmitButton>
+        <button
+          type="submit"
+          formAction={skipSetupToExplore}
+          className="btn btn-ghost btn-block text-[13.5px] text-ink-3 hover:text-ink font-normal"
+        >
+          Skip &amp; explore dashboard →
+        </button>
+      </div>
       <p className="text-center text-[12px] text-ink-3">
         You can change all of this later in Settings.
       </p>
