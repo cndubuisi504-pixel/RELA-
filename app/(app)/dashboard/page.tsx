@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/documents/StatusBadge";
 import { typeMeta, type DocType } from "@/lib/documents/status";
 import { formatKobo, asCurrency, CURRENCIES, type Currency } from "@/lib/money";
 import { ArrowRightIcon, CheckIcon } from "@/components/ui/icons";
+import { checkBusinessProfileCompletion } from "@/lib/business/guard";
 
 const filters = [
   { key: "all", label: "All" },
@@ -102,10 +103,7 @@ export default async function DashboardPage({
       )
     : null;
 
-  const isExploring =
-    !business?.bank_account_number ||
-    business?.phone === "+2348000000000" ||
-    business?.address === "Nigeria";
+  const isExploring = !checkBusinessProfileCompletion(business).isComplete;
 
   return (
     <div className="space-y-5">

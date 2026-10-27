@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { DocType } from "@/lib/documents/status";
 import { CURRENCIES, type Currency } from "@/lib/money";
+import { checkBusinessProfileCompletion } from "@/lib/business/guard";
 
 export type NewDocumentInput = {
   type: DocType;
@@ -104,6 +105,28 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, error: "You must be signed in to create a document." };
+  }
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("phone, address, bank_account_number, bank_name")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  const profileCheck = checkBusinessProfileCompletion(business);
+  if (!profileCheck.isComplete) {
+    return {
+      ok: false,
+      error: `Please complete your business profile (${profileCheck.missingFields.join(", ")}) in Settings before creating documents.`,
+    };
+  }
+
   const { data, error } = await supabase.rpc("create_document_in_currency", {
     p_type: input.type,
     p_currency: currency as Currency,
