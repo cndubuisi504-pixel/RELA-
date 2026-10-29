@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { chromium } from "playwright";
 
 process.loadEnvFile(".env.local");
-const base = process.env.QA_BASE_URL || "https://rela-iota-eight.vercel.app";
+const base = process.env.QA_BASE_URL || "https://rela-ng.vercel.app";
 const SUPA = "https://zglkbrivfkabmlhrllbf.supabase.co";
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const QA_BIZ = "224a87f0-5294-4ae1-bd81-86da8ed685ba";

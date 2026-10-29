@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-ng.vercel.app";
   const proto = req.headers.get("x-forwarded-proto") || "https";
   const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
   // 3. Extract reference and enforce idempotency
   const reference = (body.reference || body.payment_reference || body.order_number)?.trim();
   const supabase = getServiceSupabase();
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-ng.vercel.app";
   const proto = req.headers.get("x-forwarded-proto") || "https";
   const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 

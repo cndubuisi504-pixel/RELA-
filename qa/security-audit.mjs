@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
 process.loadEnvFile('.env.local');
 const E = process.env;
-const BASE = E.QA_BASE_URL || 'https://rela-iota-eight.vercel.app';
+const BASE = E.QA_BASE_URL || 'https://rela-ng.vercel.app';
 const DB = E.NEXT_PUBLIC_SUPABASE_URL;
 const ANON = E.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE = E.SUPABASE_SERVICE_ROLE_KEY;

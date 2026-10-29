@@ -37,7 +37,7 @@ export async function GET(
     );
   }
 
-  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-iota-eight.vercel.app";
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "rela-ng.vercel.app";
   const proto = req.headers.get("x-forwarded-proto") || "https";
   const origin = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 

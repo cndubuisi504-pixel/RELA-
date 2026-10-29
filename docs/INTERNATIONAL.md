@@ -60,5 +60,5 @@ than relying on demo rows left behind by another suite.
 
 To run against a dev server, export the service-role key locally (never in chat or
 source control) and run `node qa/currency.mjs`. For the post-deploy smoke test set
-`QA_BASE_URL=https://rela-iota-eight.vercel.app`. Only the dedicated QA business is
+`QA_BASE_URL=https://rela-ng.vercel.app`. Only the dedicated QA business is
 used; test-created documents are removed and prior defaults, plan and usage restored.

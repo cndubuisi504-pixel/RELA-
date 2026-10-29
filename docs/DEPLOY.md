@@ -56,14 +56,14 @@ npm run deploy                    # links the project + deploys to production
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | `2349169483998` |
 | `PAYSTACK_SECRET_KEY` | Paystack dashboard — **server only**, sensitive (test key now, swap to live) |
 | `PAYSTACK_PUBLIC_KEY` | Paystack dashboard — sensitive, also server-side; hosted checkout needs no client key |
-| `NEXT_PUBLIC_APP_URL` | `https://rela-iota-eight.vercel.app` — the project's actual production URL (already set) |
+| `NEXT_PUBLIC_APP_URL` | `https://rela-ng.vercel.app` — the project's actual production URL (already set) |
 
 ## Paystack go-live checklist
 
 1. Deploy (see above), confirm the site loads at the production URL, and that
    `NEXT_PUBLIC_APP_URL` matches it — the checkout callback depends on it.
 2. Paystack dashboard → **Settings → Webhooks**: add
-   `https://rela-iota-eight.vercel.app/api/webhooks/paystack`. (Point it at the **live**
+   `https://rela-ng.vercel.app/api/webhooks/paystack`. (Point it at the **live**
    integration when live keys replace the test ones.)
 3. Replace the two Paystack env vars with `sk_live_…` / `pk_live_…` (*not* in chat —
    Vercel dashboard → Project → Settings → Environment Variables), trigger a

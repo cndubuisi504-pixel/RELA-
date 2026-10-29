@@ -55,8 +55,8 @@ const sampleResponse = `{
     "status": "paid",
     "total": 48000,
     "currency": "NGN",
-    "verification_url": "https://rela-iota-eight.vercel.app/r/249458b6c15fc64e59691ba0b594ec6f",
-    "pdf_download_url": "https://rela-iota-eight.vercel.app/v1/receipts/rec_a14081a657074f3aee674ff8/download?token=1d86078d101ed94f08b7345140bec1f52f024d96"
+    "verification_url": "https://rela-ng.vercel.app/r/249458b6c15fc64e59691ba0b594ec6f",
+    "pdf_download_url": "https://rela-ng.vercel.app/v1/receipts/rec_a14081a657074f3aee674ff8/download?token=1d86078d101ed94f08b7345140bec1f52f024d96"
   }
 }`;
 
@@ -206,7 +206,7 @@ export default function ApiDocsPage() {
               <div>
                 <h3 className="text-[14px] font-semibold uppercase tracking-wider text-ink-3">Example Request</h3>
                 <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--invert-bg)] p-4 text-[12px] leading-relaxed text-[var(--invert-text)]">
-                  <code>{`curl -X POST https://rela-iota-eight.vercel.app/v1/receipts \\
+                  <code>{`curl -X POST https://rela-ng.vercel.app/v1/receipts \\
   -H "Authorization: Bearer $RELA_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '${sampleRequest}'`}</code>
@@ -313,7 +313,7 @@ Content-Length: 4093`}</code>
                   </p>
                   <pre className="mt-3 overflow-x-auto rounded-lg bg-[var(--invert-bg)] p-3 text-[11px] text-[var(--invert-text)]">
                     <code>{`// Server-side Route Handler
-const res = await fetch(\`https://rela-iota-eight.vercel.app/v1/receipts/\${id}/download\`, {
+const res = await fetch(\`https://rela-ng.vercel.app/v1/receipts/\${id}/download\`, {
   headers: { Authorization: \`Bearer \${process.env.RELA_API_KEY}\` }
 });
 return new Response(await res.blob(), { headers: res.headers });`}</code>
@@ -338,7 +338,7 @@ return new Response(await res.blob(), { headers: res.headers });`}</code>
               Every created receipt automatically receives a permanent public verification link (<code className="text-ink">verification_url</code>) hosted on Rela:
             </p>
             <pre className="mt-3 overflow-x-auto rounded-xl bg-[var(--invert-bg)] p-3.5 text-[12.5px] text-[var(--invert-text)]">
-              <code>https://rela-iota-eight.vercel.app/r/249458b6c15fc64e59691ba0b594ec6f</code>
+              <code>https://rela-ng.vercel.app/r/249458b6c15fc64e59691ba0b594ec6f</code>
             </pre>
             <ul className="mt-4 space-y-2 text-[13.5px] text-ink-2">
               <li className="flex items-center gap-2">
