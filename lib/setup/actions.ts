@@ -29,14 +29,13 @@ export async function saveBusiness(_prev: SetupState, formData: FormData): Promi
   const { supabase, user } = await requireUser();
 
   const name = clean(formData.get("name"));
-  const address = clean(formData.get("address"));
   const phone = clean(formData.get("phone")).replace(/[\s-]/g, "");
+  const address = clean(formData.get("address"));
   const email = clean(formData.get("email")).toLowerCase();
   const registration = clean(formData.get("registration_info"));
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 2) fieldErrors.name = "Enter your business name as customers know it.";
-  if (address.length < 5) fieldErrors.address = "Add the address customers should see on documents.";
   if (!NIGERIAN_PHONE.test(phone)) fieldErrors.phone = "Use a Nigerian number, e.g. 0803 123 4567.";
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = "That email doesn’t look right.";
 
@@ -53,10 +52,11 @@ export async function saveBusiness(_prev: SetupState, formData: FormData): Promi
     {
       owner_id: user.id,
       name,
-      address,
       phone: normalizedPhone,
+      address: address || null,
       email: email || null,
       registration_info: registration || null,
+      setup_completed_at: new Date().toISOString(),
     },
     { onConflict: "owner_id" },
   );
@@ -66,8 +66,9 @@ export async function saveBusiness(_prev: SetupState, formData: FormData): Promi
     return { error: "We couldn’t save your business details. Check your connection and try again.", values };
   }
 
-  revalidatePath("/setup", "layout");
-  redirect("/setup/branding");
+  revalidatePath("/", "layout");
+  revalidatePath("/dashboard", "page");
+  redirect("/dashboard");
 }
 
 export async function saveBranding(_prev: SetupState, formData: FormData): Promise<SetupState> {

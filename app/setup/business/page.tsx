@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SetupShell } from "@/components/setup/SetupShell";
 import { BusinessForm } from "@/components/setup/BusinessForm";
 
-export const metadata = { title: "Your business · Setup" };
+export const metadata = { title: "Quick Setup · rela." };
 
 export default async function BusinessStep() {
   const supabase = await createClient();
@@ -21,8 +21,8 @@ export default async function BusinessStep() {
   return (
     <SetupShell
       current="business"
-      title="Tell us about your business"
-      subtitle="This is what your customers see at the top of every document."
+      title="Create your business profile"
+      subtitle="Only essential information needed. You can create receipts, invoices, and quotations right after."
     >
       <BusinessForm defaults={business ?? undefined} />
     </SetupShell>

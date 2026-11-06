@@ -402,6 +402,26 @@ export default async function DocumentDetail({
         />
       </div>
 
+      {(!business?.logo_url || (type === "invoice" && currency === "NGN" && !business?.bank_account_number)) && (
+        <div className="rounded-xl border border-line/80 bg-surface p-3 text-[12.5px] text-ink-3">
+          {!business?.logo_url ? (
+            <div className="flex items-center justify-between gap-2">
+              <span>🎨 Add your business logo to give your documents custom branding</span>
+              <Link href="/settings" className="shrink-0 font-medium text-ink underline underline-offset-2 hover:text-[var(--accent-text)]">
+                Upload logo →
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <span>🏦 Add your bank account so clients see payment transfer details automatically</span>
+              <Link href="/settings" className="shrink-0 font-medium text-ink underline underline-offset-2 hover:text-[var(--accent-text)]">
+                Add bank account →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="text-center text-[12px] leading-relaxed text-ink-3" role="note">
         Share attaches the PDF in WhatsApp; copy link gives the customer a verify page.
         {type === "quotation" &&

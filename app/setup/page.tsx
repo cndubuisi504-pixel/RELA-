@@ -10,14 +10,10 @@ export default async function SetupIndex() {
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, name, setup_completed_at, logo_url, bank_account_number")
+    .select("id, name, setup_completed_at")
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  if (!business) redirect("/setup/business");
-  if (!business.setup_completed_at) {
-    if (!business.logo_url) redirect("/setup/branding");
-    redirect("/setup/preferences");
-  }
+  if (!business || !business.name) redirect("/setup/business");
   redirect("/dashboard");
 }

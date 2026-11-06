@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  if (!business || !business.setup_completed_at) redirect("/setup");
+  if (!business || !business.name) redirect("/setup/business");
 
   const { data: profile } = await supabase
     .from("profiles")

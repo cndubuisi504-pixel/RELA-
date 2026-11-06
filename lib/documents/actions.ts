@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { DocType } from "@/lib/documents/status";
 import { CURRENCIES, type Currency } from "@/lib/money";
-import { checkBusinessProfileCompletion } from "@/lib/business/guard";
 
 export type NewDocumentInput = {
   type: DocType;
@@ -115,15 +114,14 @@ export async function createDocument(input: NewDocumentInput): Promise<NewDocume
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("phone, address, bank_account_number, bank_name")
+    .select("id, name")
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  const profileCheck = checkBusinessProfileCompletion(business);
-  if (!profileCheck.isComplete) {
+  if (!business) {
     return {
       ok: false,
-      error: `Please complete your business profile (${profileCheck.missingFields.join(", ")}) in Settings before creating documents.`,
+      error: "Please create your business profile before creating documents.",
     };
   }
 

@@ -24,12 +24,18 @@ export function DocumentEditor({
   defaultCurrency,
   defaultPaymentInstructions,
   quantityLabelDefault,
+  hasBank = false,
+  hasLogo = false,
+  hasAddress = false,
 }: {
   type: DocType;
   defaultMode: EditorMode;
   defaultCurrency: Currency;
   defaultPaymentInstructions: string;
   quantityLabelDefault: QuantityLabel;
+  hasBank?: boolean;
+  hasLogo?: boolean;
+  hasAddress?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -126,6 +132,19 @@ export function DocumentEditor({
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
+
+      {!hasLogo && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-surface px-3.5 py-2.5 text-[12.5px] text-ink-3">
+          <span>Documents show your business initial by default. Want your custom logo instead?</span>
+          <Link
+            href="/settings"
+            target="_blank"
+            className="font-medium text-ink underline underline-offset-2 hover:text-[var(--accent-text)]"
+          >
+            Upload logo →
+          </Link>
+        </div>
+      )}
 
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-medium text-ink">Customer</h2>
@@ -303,6 +322,21 @@ export function DocumentEditor({
             <strong className="font-medium text-ink-2">invoice</strong> instead — every payment you
             record on it turns into its own receipt.
           </p>
+          {!hasAddress && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-line/70 bg-surface-2/40 p-2.5 text-[12px] text-ink-3">
+              <span className="text-xs leading-none" aria-hidden>💡</span>
+              <div>
+                <span>Optional tip: Want a physical or shop address printed on receipts? </span>
+                <Link
+                  href="/settings"
+                  target="_blank"
+                  className="text-ink underline underline-offset-2 hover:text-[var(--accent-text)]"
+                >
+                  Add address in Settings →
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -339,6 +373,22 @@ export function DocumentEditor({
             <label htmlFor="payment-instructions" className="mb-1.5 block text-[13.5px] font-medium text-ink">
               Payment instructions
             </label>
+            {!hasBank && currency === "NGN" && (
+              <div className="mb-2.5 flex items-start gap-2.5 rounded-xl border border-[var(--primary-soft)] bg-[var(--primary-soft)]/20 p-3 text-[12.5px] text-ink-2">
+                <span className="text-sm leading-none" aria-hidden>💡</span>
+                <div className="flex-1">
+                  <span className="font-medium text-ink">No bank account linked yet:</span> You can type your bank details in the box below, or{" "}
+                  <Link
+                    href="/settings"
+                    target="_blank"
+                    className="font-medium text-[var(--accent-text)] underline underline-offset-2 hover:text-ink"
+                  >
+                    save your bank account in Settings
+                  </Link>{" "}
+                  to display it on all future invoices automatically.
+                </div>
+              </div>
+            )}
             <textarea
               id="payment-instructions"
               value={instructions}

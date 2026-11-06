@@ -15,6 +15,14 @@ export type AdminOverviewMetrics = {
   totalApiReceipts: number;
   totalApiVolume: number;
   activeApiKeys: number;
+  // Activation & Funnel Success Metrics
+  registrationCompletionRate: number;
+  businessCreationRate: number;
+  firstDocumentCreationRate: number; // Primary Success Criterion
+  usersWithFirstDocument: number;
+  avgTimeToFirstDocMinutes: number;
+  medianTimeToFirstDocMinutes: number;
+  profileCompletionRate: number;
 };
 
 export type TimelinePoint = {

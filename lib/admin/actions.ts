@@ -399,6 +399,45 @@ export async function getAdminFullData(): Promise<AdminFullData | null> {
   const totalDocCollectedKobo = documents.reduce((sum, d) => sum + (Number(d.amount_paid_kobo) || 0), 0);
   const totalApiVolume = apiReceipts.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0);
 
+  // Activation & Funnel Metrics
+  const usersWithDocs = new Set<string>();
+  const timeToFirstDocMinutes: number[] = [];
+  const earliestDocByUser = new Map<string, Date>();
+
+  for (const doc of documents) {
+    const biz = businessMap.get(doc.business_id);
+    if (biz && biz.owner_id) {
+      usersWithDocs.add(biz.owner_id);
+      const docDate = new Date(doc.created_at);
+      const existing = earliestDocByUser.get(biz.owner_id);
+      if (!existing || docDate < existing) {
+        earliestDocByUser.set(biz.owner_id, docDate);
+      }
+    }
+  }
+
+  for (const [userId, firstDocDate] of earliestDocByUser.entries()) {
+    const user = userMap.get(userId);
+    if (user && user.created_at) {
+      const userDate = new Date(user.created_at);
+      const diffMinutes = Math.max(0, Math.round((firstDocDate.getTime() - userDate.getTime()) / 60000));
+      timeToFirstDocMinutes.push(diffMinutes);
+    }
+  }
+
+  timeToFirstDocMinutes.sort((a, b) => a - b);
+  const avgTimeToFirstDocMinutes = timeToFirstDocMinutes.length > 0
+    ? Math.round(timeToFirstDocMinutes.reduce((a, b) => a + b, 0) / timeToFirstDocMinutes.length)
+    : 0;
+  const medianTimeToFirstDocMinutes = timeToFirstDocMinutes.length > 0
+    ? timeToFirstDocMinutes[Math.floor(timeToFirstDocMinutes.length / 2)]
+    : 0;
+
+  const registrationCompletionRate = users.length > 0 ? Math.round((profiles.length / users.length) * 100) : 100;
+  const businessCreationRate = users.length > 0 ? Math.round((businesses.length / users.length) * 100) : 0;
+  const firstDocumentCreationRate = users.length > 0 ? Math.round((usersWithDocs.size / users.length) * 100) : 0;
+  const profileCompletionRate = businesses.length > 0 ? Math.round((completedBizCount / businesses.length) * 100) : 0;
+
   const metrics: AdminOverviewMetrics = {
     totalUsers: users.length,
     totalBusinesses: businesses.length,
@@ -416,6 +455,14 @@ export async function getAdminFullData(): Promise<AdminFullData | null> {
     totalApiReceipts: apiReceipts.length,
     totalApiVolume,
     activeApiKeys: adminApiKeys.filter((k) => k.status === "active").length,
+    // Activation & Funnel Success Metrics
+    registrationCompletionRate,
+    businessCreationRate,
+    firstDocumentCreationRate,
+    usersWithFirstDocument: usersWithDocs.size,
+    avgTimeToFirstDocMinutes,
+    medianTimeToFirstDocMinutes,
+    profileCompletionRate,
   };
 
   return {
