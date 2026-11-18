@@ -39,6 +39,9 @@ export type ApiKeyValidationResult =
       keyId: string;
       name: string;
       businessId?: string | null;
+      agencyId?: string | null;
+      projectId?: string | null;
+      isPartnerKey: boolean;
       isTest: boolean;
     }
   | {
@@ -107,6 +110,9 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
       keyId: "master_env_key",
       name: "Master Storefront Key",
       businessId: null,
+      agencyId: null,
+      projectId: null,
+      isPartnerKey: false,
       isTest: isTestFromPrefix,
     };
   }
@@ -117,7 +123,7 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
 
   const { data: keyRecord, error } = await supabase
     .from("api_keys")
-    .select("id, name, business_id, status, rate_limit_per_minute, is_test")
+    .select("id, name, business_id, agency_id, project_id, environment, status, rate_limit_per_minute, is_test")
     .eq("key_hash", keyHash)
     .single();
 
@@ -164,7 +170,12 @@ export async function validateApiKey(request: Request): Promise<ApiKeyValidation
     keyId: keyRecord.id,
     name: keyRecord.name,
     businessId: keyRecord.business_id,
-    isTest: Boolean(keyRecord.is_test || isTestFromPrefix),
+    agencyId: keyRecord.agency_id ?? null,
+    projectId: keyRecord.project_id ?? null,
+    isPartnerKey: Boolean(keyRecord.agency_id && keyRecord.project_id),
+    isTest:
+      keyRecord.environment === "sandbox" ||
+      Boolean(keyRecord.is_test || isTestFromPrefix),
   };
 }
 

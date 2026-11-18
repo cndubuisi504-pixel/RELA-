@@ -347,10 +347,44 @@ export async function POST(req: NextRequest) {
 
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
 
+  // 7b. If partner project key on production, execute atomic ₦100 wallet deduction
+  if (auth.isPartnerKey && !auth.isTest && auth.agencyId) {
+    const { data: debitRes, error: debitErr } = await supabase.rpc("debit_agency_wallet_for_receipt", {
+      p_agency_id: auth.agencyId,
+      p_project_id: auth.projectId,
+      p_business_id: auth.businessId,
+      p_amount_kobo: 10000, // ₦100
+      p_reference: reference || `REC-${receiptId}`,
+      p_idempotency_key: reference
+        ? `agency_${auth.agencyId}_ref_${reference}`
+        : `agency_${auth.agencyId}_rec_${receiptId}`,
+    });
+
+    if (debitErr || (debitRes && !debitRes.success)) {
+      const errCode = debitRes?.error || "wallet_debit_failed";
+      const status =
+        errCode === "insufficient_funds" || errCode === "client_spending_limit_exceeded"
+          ? 402
+          : 400;
+      return NextResponse.json(
+        {
+          error: {
+            code: errCode,
+            message: debitRes?.message || "Failed to process receipt billing.",
+            details: debitRes,
+          },
+        },
+        { status }
+      );
+    }
+  }
+
   // 8. Persist to api_receipts
   const { error: insertError } = await supabase.from("api_receipts").insert({
     id: receiptId,
     api_key_id: auth.keyId === "master_env_key" ? null : auth.keyId,
+    agency_id: auth.agencyId ?? null,
+    project_id: auth.projectId ?? null,
     receipt_number: receiptNumber,
     order_number: reference || null,
     business_name: businessName,
@@ -384,6 +418,24 @@ export async function POST(req: NextRequest) {
       { error: { code: "database_error", message: "Failed to save receipt record." } },
       { status: 500 }
     );
+  }
+
+  // Asynchronously log to api_request_logs if partner key
+  if (auth.isPartnerKey && auth.agencyId) {
+    supabase
+      .from("api_request_logs")
+      .insert({
+        agency_id: auth.agencyId,
+        project_id: auth.projectId,
+        business_id: auth.businessId,
+        api_key_id: auth.keyId,
+        endpoint: "/v1/receipts",
+        method: "POST",
+        status_code: 201,
+        duration_ms: Date.now() - now.getTime(),
+        response_summary: { receipt_id: receiptId, receipt_number: receiptNumber },
+      })
+      .then(() => {}, () => {});
   }
 
   // 9. Return exact response format specified
